@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+    <remote name="redwood" fetch="https://github.com/" />
+
+    <project path="device/xiaomi/redwood" name="AstralForm/android_device_xiaomi_redwood" remote="redwood" revision="lineage-20" />
+    <project path="kernel/xiaomi/sm7325" name="AstralForm/android_kernel_xiaomi_sm7325" remote="redwood" revision="lineage-20" />
+    <project path="vendor/xiaomi/sm7325" name="AstralForm/android_vendor_xiaomi_sm7325" remote="redwood" revision="lineage-20" />
+    <project path="vendor/xiaomi/sm7325-common" name="AstralForm/android_vendor_xiaomi_sm7325-common" remote="redwood" revision="lineage-20" />
+    <project path="device/xiaomi/sm7325-common" name="AstralForm/android_device_xiaomi_sm7325-common" remote="redwood" revision="lineage-20" />
+</manifest>
