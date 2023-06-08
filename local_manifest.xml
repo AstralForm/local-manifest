@@ -8,9 +8,9 @@
     <project path="kernel/xiaomi/sunny" name="Neternels/android_kernel_xiaomi_sunny" remote="sunny" revision="staging" />
     <project path="device/qcom/common" name="AOSPA/android_device_qcom_common" remote="sunny" />
     <project path="packages/apps/KProfiles" name="KProfiles/android_packages_apps_Kprofiles" remote="sunny" />
-    <project path="prebuilts/gcc/linux-x86/aarch64/aarch64-elf" remote="sunny" repository="StatiXOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-elf" branch="12.0.0" />
-    <project path="prebuilts/gcc/linux-x86/arm/arm-eabi" remote="sunny" repository="StatiXOS/android_prebuilts_gcc_linux-x86_arm_arm-eabi" branch="12.0.0" />
-    <project path="packages/apps/DisplayFeatures" remote="sunny" repository="cyberknight777/android_packages_apps_DisplayFeatures" branch="master" />
-
-    <project path="vendor/qcom/common" remote="sunny-lab" repository="yaosp/vendor_qcom_common" target_path="vendor/qcom/common" />
+    <project path="prebuilts/gcc/linux-x86/aarch64/aarch64-elf" remote="sunny" name="StatiXOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-elf" revision="12.0.0" />
+    <project path="prebuilts/gcc/linux-x86/arm/arm-eabi" remote="sunny" name="StatiXOS/android_prebuilts_gcc_linux-x86_arm_arm-eabi" revision="12.0.0" />
+    <project path="packages/apps/DisplayFeatures" remote="sunny" name="cyberknight777/android_packages_apps_DisplayFeatures" revision="master" />
+    <project path="vendor/qcom/common" remote="sunny-lab" name="yaosp/vendor_qcom_common" target_path="vendor/qcom/common" />
+    
 </manifest>
