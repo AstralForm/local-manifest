@@ -3,14 +3,15 @@
     <remote name="sunny" fetch="https://github.com/" />
     <remote name="sunny-lab" fetch="https://gitlab.com/" />
 
-    <project path="device/xiaomi/sunny" name="AstralForm/device_xiaomi_sunny" remote="sunny" />
-    <project path="vendor/xiaomi/sunny" name="AstralForm/vendor_xiaomi_sunny" remote="sunny" />
+    <project path="device/xiaomi/sunny" name="AstralForm/device_xiaomi_sunny" remote="sunny" revision="6" />
+    <project path="vendor/xiaomi/sunny" name="AstralForm/vendor_xiaomi_sunny" remote="sunny" revision="6" />
     <project path="kernel/xiaomi/sunny" name="Neternels/android_kernel_xiaomi_sunny" remote="sunny" revision="staging" />
-    <project path="device/qcom/common" name="AOSPA/android_device_qcom_common" remote="sunny" />
-    <project path="packages/apps/KProfiles" name="KProfiles/android_packages_apps_Kprofiles" remote="sunny" />
+    <project path="device/qcom/common" name="AOSPA/android_device_qcom_common" remote="sunny" revision="topaz" />
+    <project path="packages/apps/KProfiles" name="KProfiles/android_packages_apps_Kprofiles" remote="sunny" revision="main" />
     <project path="prebuilts/gcc/linux-x86/aarch64/aarch64-elf" remote="sunny" name="StatiXOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-elf" revision="12.0.0" />
     <project path="prebuilts/gcc/linux-x86/arm/arm-eabi" remote="sunny" name="StatiXOS/android_prebuilts_gcc_linux-x86_arm_arm-eabi" revision="12.0.0" />
     <project path="packages/apps/DisplayFeatures" remote="sunny" name="cyberknight777/android_packages_apps_DisplayFeatures" revision="master" />
-    <project path="vendor/qcom/common" remote="sunny-lab" name="yaosp/vendor_qcom_common" target_path="vendor/qcom/common" />
+    <project path="vendor/qcom/common" remote="sunny-lab" name="yaosp/vendor_qcom_common" revison="thirteen"/>
+    <project path="hardware/xiaomi" remote="sunny" name="ArrowOS-Devices/android_hardware_xiaomi" revison="arrow-13.1"/>
     
 </manifest>
