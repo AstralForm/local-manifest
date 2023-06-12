@@ -11,7 +11,7 @@
     <project path="prebuilts/gcc/linux-x86/aarch64/aarch64-elf" remote="sunny" name="StatiXOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-elf" revision="12.0.0" />
     <project path="prebuilts/gcc/linux-x86/arm/arm-eabi" remote="sunny" name="StatiXOS/android_prebuilts_gcc_linux-x86_arm_arm-eabi" revision="12.0.0" />
     <project path="packages/apps/DisplayFeatures" remote="sunny" name="cyberknight777/android_packages_apps_DisplayFeatures" revision="master" />
-    <project path="vendor/qcom/common" remote="sunny-lab" name="yaosp/vendor_qcom_common" revison="thirteen"/>
-    <project path="hardware/xiaomi" remote="sunny" name="ArrowOS-Devices/android_hardware_xiaomi" revison="arrow-13.1"/>
+    <project path="vendor/qcom/common" remote="sunny-lab" name="yaosp/vendor_qcom_common" revision="thirteen"/>
+    <project path="hardware/xiaomi" remote="sunny" name="ArrowOS-Devices/android_hardware_xiaomi" revision="arrow-13.1"/>
     
 </manifest>
