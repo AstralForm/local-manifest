@@ -115,10 +115,10 @@ Post **exactly one** Slack message **after all downloads finish** (after the sum
 *AO Bulk Export - Workflow Triggered* :white_check_mark:
 
 *Run details*
-• *User:* <user name>
-• *Case ID:* `<case id>`
-• *Company:* <company name>
-• *Entity:* <entity name>
+> *:bust_in_silhouette: User:* *<user name>*
+> *:ticket: Case ID:* *<case id>*
+> *:office: Company:* *<company name>*
+> *:classical_building: Entity:* *<entity name>*
 
 *Results*
 • :large_green_circle: Successful: <n>
@@ -298,10 +298,10 @@ SLACK_MSG=$(cat <<EOF
 *AO Bulk Export - Workflow Triggered* ${TITLE_EMOJI}
 
 *Run details*
-• *User:* ${USER_NAME}
-• *Case ID:* \`${CASE_ID}\`
-• *Company:* ${COMPANY_NAME}
-• *Entity:* ${ENTITY_DIR}
+> *:bust_in_silhouette: User:* *${USER_NAME}*
+> *:ticket: Case ID:* *${CASE_ID}*
+> *:office: Company:* *${COMPANY_NAME}*
+> *:classical_building: Entity:* *${ENTITY_DIR}*
 
 *Results*
 • :large_green_circle: Successful: ${SUCCESS}
@@ -349,7 +349,6 @@ echo -e "${CYAN}==========================================${NC}"
 - Prompt for user name, case ID, company name, and entity name before downloads
 - One Slack message only — after downloads complete — including those four fields + counts
 - Always include: `@acc-ops-seniors, please review the files before uploading.`
-- Always include footer credit: Created by Arham Dharewa
 - Use richer Slack mrkdwn layout (sections, bullets, status emojis); warn when Failed > 0
 - Script header must include Created by: Arham Dharewa
 - No Slack posts at start or per file

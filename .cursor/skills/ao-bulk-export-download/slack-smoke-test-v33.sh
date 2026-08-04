@@ -75,10 +75,10 @@ SLACK_MSG=$(cat <<EOF
 *AO Bulk Export - Workflow Triggered* ${TITLE_EMOJI}
 
 *Run details*
-• *User:* ${USER_NAME}
-• *Case ID:* \`${CASE_ID}\`
-• *Company:* ${COMPANY_NAME}
-• *Entity:* ${ENTITY_DIR}
+> *:bust_in_silhouette: User:* *${USER_NAME}*
+> *:ticket: Case ID:* *${CASE_ID}*
+> *:office: Company:* *${COMPANY_NAME}*
+> *:classical_building: Entity:* *${ENTITY_DIR}*
 
 *Results*
 • :large_green_circle: Successful: ${SUCCESS}
