@@ -112,7 +112,7 @@ Post **exactly one** Slack message **after all downloads finish** (after the sum
 **Message body must include** (use this richer layout):
 
 ```text
-*AO Bulk Export — Download Complete* :white_check_mark:
+*AO Bulk Export - Workflow Triggered* :white_check_mark:
 
 *Run details*
 • *User:* <user name>
@@ -297,7 +297,7 @@ else
 fi
 
 SLACK_MSG=$(cat <<EOF
-*AO Bulk Export — Download Complete* ${TITLE_EMOJI}
+*AO Bulk Export - Workflow Triggered* ${TITLE_EMOJI}
 
 *Run details*
 • *User:* ${USER_NAME}

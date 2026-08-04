@@ -72,7 +72,7 @@ else
 fi
 
 SLACK_MSG=$(cat <<EOF
-*AO Bulk Export — Download Complete* ${TITLE_EMOJI}
+*AO Bulk Export - Workflow Triggered* ${TITLE_EMOJI}
 
 *Run details*
 • *User:* ${USER_NAME}
