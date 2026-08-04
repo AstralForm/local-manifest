@@ -4,9 +4,8 @@ description: >-
   Generate a macOS-ready Bash download script from Rippling Bulk Export (or similar)
   raw text dumps containing an entity name, document labels (PAYSTUB, HUB, PRELIM_W2, W2),
   download URLs, or "No links found". At run time the script asks for user name, case id,
-  company name, and entity name, then posts one Slack completion message asking
-  @acc-ops-seniors to review. Use whenever the user pastes such export text or asks for
-  AO bulk export download script generation (V3.3).
+  company name, and entity name, then posts one Slack completion message. Use whenever
+  the user pastes such export text or asks for AO bulk export download script generation (V3.3).
 ---
 
 # AO — Bulk Export Download Script Generator V3.3
@@ -109,33 +108,36 @@ Post **exactly one** Slack message **after all downloads finish** (after the sum
 {"text":"<multi-line completion message>"}
 ```
 
-**Message body must include** (use this richer layout):
+**Message body must use this plain-text visual layout** (Workflow Builder does not reliably render Slack mrkdwn / `:emoji:` shortcodes — use Unicode characters only):
 
 ```text
-*AO Bulk Export - Workflow Triggered* :white_check_mark:
+AO Bulk Export - Workflow Triggered ✅
 
-*Run details*
-> *:bust_in_silhouette: User:* *<user name>*
-> *:ticket: Case ID:* *<case id>*
-> *:office: Company:* *<company name>*
-> *:classical_building: Entity:* *<entity name>*
+━━━━━━━━━━━━━━━━━━━━
+📋 RUN DETAILS
+━━━━━━━━━━━━━━━━━━━━
+👤 User:      <user name>
+🎫 Case ID:   <case id>
+🏢 Company:   <company name>
+🏛 Entity:    <entity name>
 
-*Results*
-• :large_green_circle: Successful: <n>
-• :large_yellow_circle: Skipped: <n>
-• :red_circle: Failed: <n>
-• :file_folder: Files attempted: <TOTAL_FILES>
-• :open_file_folder: Download folder: `<entity folder>`
-
-*Next step*
-@acc-ops-seniors, please review the files before uploading.
+━━━━━━━━━━━━━━━━━━━━
+📊 RESULTS
+━━━━━━━━━━━━━━━━━━━━
+🟢 Successful:       <n>
+🟡 Skipped:          <n>
+🔴 Failed:           <n>
+📁 Files attempted:  <TOTAL_FILES>
+📂 Download folder:  <entity folder>
 ```
 
-If `Failed` is greater than 0, change the title emoji to `:warning:` and add one extra line under Results:
+If `Failed` is greater than 0, change the title emoji to ⚠️ and append:
 
 ```text
-:warning: *Action needed:* one or more downloads failed — re-check before upload.
+⚠️ Action needed: one or more downloads failed — re-check before upload.
 ```
+
+Do **not** include a Next step section or `@acc-ops-seniors` in the Slack message.
 
 Slack failures must never abort the script (`|| true`).
 
@@ -154,7 +156,7 @@ Every successful response must include, in order:
 ```text
 Generated: Acme Corporation.sh (14 downloads).
 Prompts at run: user name, case ID, company name, entity name.
-Slack: one completion message only (includes @acc-ops-seniors review ask).
+Slack: one completion message only (plain-text visual layout).
 Omitted (no links): PRELIM_W2
 ```
 
@@ -287,33 +289,34 @@ echo -e "${YELLOW}Skipped    :${NC} $SKIPPED"
 echo -e "${RED}Failed     :${NC} $FAILED"
 
 if [ "$FAILED" -gt 0 ]; then
-    TITLE_EMOJI=':warning:'
-    ACTION_LINE=':warning: *Action needed:* one or more downloads failed — re-check before upload.'
+    TITLE_EMOJI='⚠️'
+    ACTION_LINE='⚠️ Action needed: one or more downloads failed — re-check before upload.'
 else
-    TITLE_EMOJI=':white_check_mark:'
+    TITLE_EMOJI='✅'
     ACTION_LINE=''
 fi
 
 SLACK_MSG=$(cat <<EOF
-*AO Bulk Export - Workflow Triggered* ${TITLE_EMOJI}
+AO Bulk Export - Workflow Triggered ${TITLE_EMOJI}
 
-*Run details*
-> *:bust_in_silhouette: User:* *${USER_NAME}*
-> *:ticket: Case ID:* *${CASE_ID}*
-> *:office: Company:* *${COMPANY_NAME}*
-> *:classical_building: Entity:* *${ENTITY_DIR}*
+━━━━━━━━━━━━━━━━━━━━
+📋 RUN DETAILS
+━━━━━━━━━━━━━━━━━━━━
+👤 User:      ${USER_NAME}
+🎫 Case ID:   ${CASE_ID}
+🏢 Company:   ${COMPANY_NAME}
+🏛 Entity:    ${ENTITY_DIR}
 
-*Results*
-• :large_green_circle: Successful: ${SUCCESS}
-• :large_yellow_circle: Skipped: ${SKIPPED}
-• :red_circle: Failed: ${FAILED}
-• :file_folder: Files attempted: ${TOTAL_FILES}
-• :open_file_folder: Download folder: \`${ENTITY_DIR}\`
+━━━━━━━━━━━━━━━━━━━━
+📊 RESULTS
+━━━━━━━━━━━━━━━━━━━━
+🟢 Successful:       ${SUCCESS}
+🟡 Skipped:          ${SKIPPED}
+🔴 Failed:           ${FAILED}
+📁 Files attempted:  ${TOTAL_FILES}
+📂 Download folder:  ${ENTITY_DIR}
 ${ACTION_LINE:+
-${ACTION_LINE}
-}
-*Next step*
-@acc-ops-seniors, please review the files before uploading.
+${ACTION_LINE}}
 EOF
 )
 notify_slack "$SLACK_MSG"
@@ -348,8 +351,9 @@ echo -e "${CYAN}==========================================${NC}"
 
 - Prompt for user name, case ID, company name, and entity name before downloads
 - One Slack message only — after downloads complete — including those four fields + counts
-- Always include: `@acc-ops-seniors, please review the files before uploading.`
-- Use richer Slack mrkdwn layout (sections, bullets, status emojis); warn when Failed > 0
+- Slack message must use plain-text Unicode layout (no mrkdwn asterisks / `:emoji:` shortcodes)
+- Do not include Next step or @acc-ops-seniors in the Slack message
+- Warn in Slack when Failed > 0
 - Script header must include Created by: Arham Dharewa
 - No Slack posts at start or per file
 - One `curl -L -f -o` per valid URL; wrap in `if` so failures do not abort under `set -e`

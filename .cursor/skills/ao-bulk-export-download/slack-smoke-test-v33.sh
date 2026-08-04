@@ -34,7 +34,7 @@ notify_slack() {
     local msg="$1"
     local payload
     payload="{\"text\":\"$(json_escape "$msg")\"}"
-    echo -e "${BLUE}Slack ← completion message${NC}"
+    echo -e "${BLUE}Slack <- completion message${NC}"
     curl -sS -X POST \
         -H 'Content-type: application/json' \
         --data "$payload" \
@@ -64,33 +64,34 @@ while [ -z "${ENTITY_DIR:-}" ]; do
 done
 
 if [ "$FAILED" -gt 0 ]; then
-    TITLE_EMOJI=':warning:'
-    ACTION_LINE=':warning: *Action needed:* one or more downloads failed — re-check before upload.'
+    TITLE_EMOJI='⚠️'
+    ACTION_LINE='⚠️ Action needed: one or more downloads failed — re-check before upload.'
 else
-    TITLE_EMOJI=':white_check_mark:'
+    TITLE_EMOJI='✅'
     ACTION_LINE=''
 fi
 
 SLACK_MSG=$(cat <<EOF
-*AO Bulk Export - Workflow Triggered* ${TITLE_EMOJI}
+AO Bulk Export - Workflow Triggered ${TITLE_EMOJI}
 
-*Run details*
-> *:bust_in_silhouette: User:* *${USER_NAME}*
-> *:ticket: Case ID:* *${CASE_ID}*
-> *:office: Company:* *${COMPANY_NAME}*
-> *:classical_building: Entity:* *${ENTITY_DIR}*
+━━━━━━━━━━━━━━━━━━━━
+📋 RUN DETAILS
+━━━━━━━━━━━━━━━━━━━━
+👤 User:      ${USER_NAME}
+🎫 Case ID:   ${CASE_ID}
+🏢 Company:   ${COMPANY_NAME}
+🏛 Entity:    ${ENTITY_DIR}
 
-*Results*
-• :large_green_circle: Successful: ${SUCCESS}
-• :large_yellow_circle: Skipped: ${SKIPPED}
-• :red_circle: Failed: ${FAILED}
-• :file_folder: Files attempted: ${TOTAL_FILES}
-• :open_file_folder: Download folder: \`${ENTITY_DIR}\`
+━━━━━━━━━━━━━━━━━━━━
+📊 RESULTS
+━━━━━━━━━━━━━━━━━━━━
+🟢 Successful:       ${SUCCESS}
+🟡 Skipped:          ${SKIPPED}
+🔴 Failed:           ${FAILED}
+📁 Files attempted:  ${TOTAL_FILES}
+📂 Download folder:  ${ENTITY_DIR}
 ${ACTION_LINE:+
-${ACTION_LINE}
-}
-*Next step*
-@acc-ops-seniors, please review the files before uploading.
+${ACTION_LINE}}
 EOF
 )
 
