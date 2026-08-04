@@ -211,19 +211,49 @@ CURRENT=0
 
 SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL:-https://hooks.slack.com/triggers/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}"
 
+# macOS-safe JSON string escape (no sed — BSD sed breaks on multiline text)
 json_escape() {
-    printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/	/\\t/g' | awk '{printf "%s\\n", $0}' | sed 's/\\n$//'
+    local s=$1
+    s=${s//\\/\\\\}
+    s=${s//\"/\\\"}
+    s=${s//$'\t'/\\t}
+    s=${s//$'\r'/\\r}
+    s=${s//$'\n'/\\n}
+    printf '%s' "$s"
+}
+
+build_slack_payload() {
+    local msg="$1"
+    # Prefer python3 on macOS for correct Unicode + JSON encoding
+    if command -v python3 >/dev/null 2>&1; then
+        SLACK_TEXT="$msg" python3 -c 'import json,os; print(json.dumps({"text": os.environ["SLACK_TEXT"]}, ensure_ascii=False))'
+    else
+        printf '{"text":"%s"}' "$(json_escape "$msg")"
+    fi
 }
 
 notify_slack() {
     local msg="$1"
-    local payload
+    local payload response http_code body
     [ -z "$SLACK_WEBHOOK_URL" ] && return 0
-    payload="{\"text\":\"$(json_escape "$msg")\"}"
-    curl -sS -X POST \
-        -H 'Content-type: application/json' \
-        --data "$payload" \
-        "$SLACK_WEBHOOK_URL" >/dev/null 2>&1 || true
+    payload="$(build_slack_payload "$msg")" || {
+        echo -e "${YELLOW}Slack payload build failed.${NC}"
+        return 0
+    }
+    response="$(curl -sS -w $'\n%{http_code}' -X POST \
+        -H 'Content-type: application/json; charset=utf-8' \
+        --data-binary "$payload" \
+        "$SLACK_WEBHOOK_URL" 2>&1)" || true
+    http_code="$(printf '%s\n' "$response" | tail -n 1)"
+    body="$(printf '%s\n' "$response" | sed '$d')"
+    if [ "$http_code" = "200" ]; then
+        echo -e "${BLUE}Slack completion message sent.${NC}"
+    else
+        echo -e "${YELLOW}Slack completion message did not trigger.${NC}"
+        echo -e "${YELLOW}Slack response code: ${http_code}${NC}"
+        echo -e "${YELLOW}Slack response body:${NC}"
+        echo "$body"
+    fi
 }
 
 echo -e "${CYAN}==========================================${NC}"
@@ -320,7 +350,6 @@ ${ACTION_LINE}}
 EOF
 )
 notify_slack "$SLACK_MSG"
-echo -e "${BLUE}Slack completion message sent.${NC}"
 
 echo ""
 echo -e "${CYAN}==========================================${NC}"
@@ -353,6 +382,7 @@ echo -e "${CYAN}==========================================${NC}"
 - One Slack message only — after downloads complete — including those four fields + counts
 - Slack message must use plain-text Unicode layout (no mrkdwn asterisks / `:emoji:` shortcodes)
 - Do not include Next step or @acc-ops-seniors in the Slack message
+- Slack JSON must be built with macOS-safe encoding (python3 `json.dumps` preferred; bash `json_escape` fallback — never use `sed` for JSON escaping)
 - Warn in Slack when Failed > 0
 - Script header must include Created by: Arham Dharewa
 - No Slack posts at start or per file
