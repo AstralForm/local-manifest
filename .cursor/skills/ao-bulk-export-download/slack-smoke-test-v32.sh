@@ -3,11 +3,11 @@
 set -e
 
 ##############################################
-# AO Bulk Export — Slack Smoke Test (V3.2)
+# AO Bulk Export — Slack Completion Smoke Test (V3.2)
 #
 # Does NOT download files.
-# Only posts sample progress messages to Slack
-# so you can verify the webhook end-to-end.
+# Prompts for user / case / company / entity,
+# then posts ONE Slack completion message.
 ##############################################
 
 GREEN='\033[0;32m'
@@ -15,7 +15,10 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-ENTITY_DIR='Slack Smoke Test'
+DEFAULT_ENTITY='Slack Smoke Test'
+SUCCESS=1
+SKIPPED=1
+FAILED=1
 TOTAL_FILES=3
 
 SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL:-https://hooks.slack.com/triggers/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}"
@@ -28,7 +31,7 @@ notify_slack() {
     local msg="$1"
     local payload
     payload="{\"text\":\"$(json_escape "$msg")\"}"
-    echo -e "${BLUE}Slack ←${NC} $msg"
+    echo -e "${BLUE}Slack ← completion message${NC}"
     curl -sS -X POST \
         -H 'Content-type: application/json' \
         --data "$payload" \
@@ -37,19 +40,48 @@ notify_slack() {
 }
 
 echo -e "${CYAN}==========================================${NC}"
-echo -e "${CYAN}AO Slack Smoke Test V3.2${NC}"
+echo -e "${CYAN}AO Slack Completion Smoke Test V3.2${NC}"
 echo -e "${CYAN}==========================================${NC}"
 echo ""
+echo -e "${BLUE}Enter run details${NC}"
+echo ""
 
-notify_slack "AO Bulk Export started: $ENTITY_DIR ($TOTAL_FILES files)"
-sleep 1
-notify_slack "[1/$TOTAL_FILES] ✓ PAYSTUB downloaded — $ENTITY_DIR"
-sleep 1
-notify_slack "[2/$TOTAL_FILES] Skipping HUB (already exists) — $ENTITY_DIR"
-sleep 1
-notify_slack "[3/$TOTAL_FILES] ✗ Failed to download W2 — $ENTITY_DIR"
-sleep 1
-notify_slack "AO Bulk Export done: $ENTITY_DIR — Successful: 1 | Skipped: 1 | Failed: 1"
+while [ -z "${USER_NAME:-}" ]; do
+    read -r -p "User name: " USER_NAME
+done
+while [ -z "${CASE_ID:-}" ]; do
+    read -r -p "Case ID: " CASE_ID
+done
+while [ -z "${COMPANY_NAME:-}" ]; do
+    read -r -p "Company name: " COMPANY_NAME
+done
+while [ -z "${ENTITY_DIR:-}" ]; do
+    read -r -p "Entity name [$DEFAULT_ENTITY]: " ENTITY_INPUT
+    ENTITY_DIR="${ENTITY_INPUT:-$DEFAULT_ENTITY}"
+done
+
+SLACK_MSG=$(cat <<EOF
+AO Bulk Export — Download Complete
+
+User: $USER_NAME
+Case ID: $CASE_ID
+Company: $COMPANY_NAME
+Entity: $ENTITY_DIR
+
+Successful: $SUCCESS
+Skipped: $SKIPPED
+Failed: $FAILED
+Files attempted: $TOTAL_FILES
+Download folder: $ENTITY_DIR
+EOF
+)
 
 echo ""
-echo -e "${GREEN}Smoke test complete. Check your Slack channel/workflow.${NC}"
+echo -e "${BLUE}Preview:${NC}"
+echo "$SLACK_MSG"
+echo ""
+
+notify_slack "$SLACK_MSG"
+
+echo ""
+echo -e "${GREEN}Smoke test complete. Check Slack for one completion message.${NC}"
