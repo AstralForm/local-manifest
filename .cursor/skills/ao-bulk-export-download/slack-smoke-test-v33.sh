@@ -3,7 +3,7 @@
 set -e
 
 ##############################################
-# AO Bulk Export — Slack Completion Smoke Test (V3.2)
+# AO Bulk Export — Slack Completion Smoke Test (V3.3)
 #
 # Does NOT download files.
 # Prompts for user / case / company / entity,
@@ -40,7 +40,7 @@ notify_slack() {
 }
 
 echo -e "${CYAN}==========================================${NC}"
-echo -e "${CYAN}AO Slack Completion Smoke Test V3.2${NC}"
+echo -e "${CYAN}AO Slack Completion Smoke Test V3.3${NC}"
 echo -e "${CYAN}==========================================${NC}"
 echo ""
 echo -e "${BLUE}Enter run details${NC}"
