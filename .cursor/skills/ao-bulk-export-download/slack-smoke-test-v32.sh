@@ -73,6 +73,8 @@ Skipped: $SKIPPED
 Failed: $FAILED
 Files attempted: $TOTAL_FILES
 Download folder: $ENTITY_DIR
+
+@acc-ops-seniors, please review the files before uploading.
 EOF
 )
 

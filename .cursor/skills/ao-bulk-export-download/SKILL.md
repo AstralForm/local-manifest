@@ -123,6 +123,8 @@ Skipped: <n>
 Failed: <n>
 Files attempted: <TOTAL_FILES>
 Download folder: <entity folder>
+
+@acc-ops-seniors, please review the files before uploading.
 ```
 
 Slack failures must never abort the script (`|| true`).
@@ -284,6 +286,8 @@ Skipped: $SKIPPED
 Failed: $FAILED
 Files attempted: $TOTAL_FILES
 Download folder: $ENTITY_DIR
+
+@acc-ops-seniors, please review the files before uploading.
 EOF
 )
 notify_slack "$SLACK_MSG"
