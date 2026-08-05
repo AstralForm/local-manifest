@@ -1,0 +1,29 @@
+{
+  "name": "threadtone",
+  "version": "1.0.0",
+  "description": "Rewrite Slack messages to match the tone and topic of the thread",
+  "main": "src/app.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js",
+    "local-api": "node src/local-server.js",
+    "test": "node --test test/**/*.test.js",
+    "lint": "node --check src/app.js && node --check src/local-server.js && node --check src/services/thread-context.js && node --check src/services/tone-analyzer.js && node --check src/services/rewriter.js && node --check src/blocks/views.js && node --check src/listeners/shortcuts/rewrite.js && node --check src/listeners/commands/threadtone.js && node --check src/listeners/actions/rewrite.js && node --check src/listeners/events/app-home.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@slack/bolt": "^4.2.1",
+    "dotenv": "^16.4.7"
+  },
+  "keywords": [
+    "slack",
+    "bolt",
+    "mac",
+    "tone",
+    "rewrite"
+  ],
+  "license": "MIT"
+}
