@@ -1,0 +1,61 @@
+{
+  "display_information": {
+    "name": "ThreadTone",
+    "description": "Rewrite your Slack replies so they match the tone and topic of the thread.",
+    "background_color": "#1B4332",
+    "long_description": "ThreadTone reads the conversation in a Slack thread, detects the tone (formal, casual, urgent, supportive, technical) and the topics being discussed, then rewrites your draft reply to fit. Use the message shortcut on any message, or run /threadtone. Works great in Slack for Mac."
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "ThreadTone",
+      "always_online": true
+    },
+    "shortcuts": [
+      {
+        "name": "Rewrite for thread",
+        "type": "message",
+        "callback_id": "rewrite_for_thread",
+        "description": "Rewrite a reply to match this thread's tone and topic"
+      }
+    ],
+    "slash_commands": [
+      {
+        "command": "/threadtone",
+        "description": "Rewrite a draft to match a thread's tone and topic",
+        "usage_hint": "[your draft message]",
+        "should_escape": false
+      }
+    ],
+    "app_home": {
+      "home_tab_enabled": true,
+      "messages_tab_enabled": true,
+      "messages_tab_read_only_enabled": false
+    }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "channels:history",
+        "groups:history",
+        "im:history",
+        "mpim:history",
+        "chat:write",
+        "commands",
+        "users:read"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "bot_events": [
+        "app_home_opened"
+      ]
+    },
+    "interactivity": {
+      "is_enabled": true
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": true,
+    "token_rotation_enabled": false
+  }
+}
