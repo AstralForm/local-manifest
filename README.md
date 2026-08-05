@@ -27,9 +27,27 @@ Rewrite Slack replies so they match the **tone** and **topic** of the thread —
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 18+ (includes `npm`)
 - [Slack CLI](https://docs.slack.dev/tools/slack-cli/) (`slack`)
 - A Slack workspace or [developer sandbox](https://api.slack.com/developer-program/sandboxes)
+
+### Install Node.js on Mac (if `npm` is not found)
+
+If you see `zsh: command not found: npm`, install Node first:
+
+```bash
+# 1) Install Homebrew if you don't have it
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# 2) Install Node (brings npm)
+brew install node
+
+# 3) Confirm
+node --version   # should be v18+
+npm --version
+```
+
+Or download the macOS installer from [nodejs.org](https://nodejs.org/) (LTS), then open a **new** terminal tab and retry.
 
 ### Install & run
 
