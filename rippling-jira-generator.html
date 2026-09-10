@@ -238,8 +238,42 @@
             background: #eef3f9;
         }
 
-        .html-block {
+        .checkbox-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
             margin-top: 8px;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            margin-top: 4px;
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        .checkbox-row .gp-label {
+            display: inline;
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin: 6px 0;
+        }
+
+        .checklist-item input[type="checkbox"] {
+            margin-top: 3px;
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .checklist-item span {
+            line-height: 1.35;
         }
 
         #emptyState {
@@ -259,7 +293,7 @@
     <h1 class="page-title">Rippling Jira Generator</h1>
     <p class="page-subtitle">
         Choose the Jira board / ticket type first. The intake fields and compiled Jira text switch to that board’s format.
-        Available formats: Global Payroll, BEXC Invoice Waiver, and BEXC Account Exemptions.
+        Available formats: Rippling Standard, Global Payroll, BEXC Invoice Waiver, and BEXC Account Exemptions.
     </p>
 
     <div class="board-picker">
@@ -272,7 +306,7 @@
         <p class="board-help" id="boardHelp">Select a board to load the matching Jira format.</p>
     </div>
 
-    <div id="emptyState">No board selected yet. Use the dropdown above to load Global Payroll, BEXC Invoice Waiver, or BEXC Account Exemptions.</div>
+    <div id="emptyState">No board selected yet. Use the dropdown above to load Rippling Standard, Global Payroll, BEXC Invoice Waiver, or BEXC Account Exemptions.</div>
     <div id="formRoot"></div>
 
     <div id="formActions">
@@ -383,6 +417,14 @@
             return isNaN(value) ? null : value;
         }
 
+        function checkbox(id, label, extra) {
+            return Object.assign({ id: id, label: label, type: 'checkbox', compileStyle: 'checklist' }, extra || {});
+        }
+
+        function checkboxes(id, label, options, extra) {
+            return Object.assign({ id: id, label: label, type: 'checkboxes', options: options, compileStyle: 'checklist' }, extra || {});
+        }
+
         function bexcAccountFields(troubleshootingHint) {
             return [
                 text('companyID', 'Company ID', {
@@ -407,6 +449,182 @@
         }
 
         const BOARDS = [
+            {
+                id: 'rippling-standard',
+                name: 'Rippling Standard template',
+                help: 'Use this standard Rippling Jira format for product/engineering issues. Complete the troubleshooting checklist and include any product-specific ENG details required for the board you are filing in.',
+                titleHint: 'Client Name | Brief description of issue',
+                titlePlaceholder: 'Example: Acme Corp | Paystub PDF fails to generate for terminated EEs',
+                fields: [
+                    area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
+                    area('whatIsHappening', 'What is happening', {
+                        section: 'What is happening',
+                        compileSection: '\n**What is happening:**\n',
+                        compileLabel: 'What is happening',
+                        hint: 'Observable system (error messages, incorrect output, unexpected system behavior)',
+                        placeholder: 'Example: Error toast “Unable to generate document” when opening the latest paystub.'
+                    }),
+                    area('whenItHappens', 'When it happens', {
+                        section: 'When it happens',
+                        compileSection: '\n**When it happens:**\n',
+                        compileLabel: 'When it happens',
+                        hint: 'Trigger conditions (what specific app/payroll run/employee is impacted and what actions are triggering the system behavior)',
+                        placeholder: 'Example: UK Default Pay Schedule, Aug 2025 run, EE Jane Doe after clicking Download paystub.'
+                    }),
+                    area('whatShouldHappen', 'What should happen', {
+                        section: 'What should happen',
+                        compileSection: '\n**What should happen:**\n',
+                        compileLabel: 'What should happen',
+                        hint: 'Correct system behavior (what should be happening and how you are able to confirm this via demo account, playbooks, HC articles etc.)',
+                        placeholder: 'Example: Paystub PDF should download. Confirmed on demo and in the Paystubs HC article.'
+                    }),
+                    text('companyID', 'Company ID', {
+                        section: 'Account and EE Details',
+                        compileSection: '\n**Account and EE Details:**\n',
+                        tooltip: 'The unique identifier for the company.'
+                    }),
+                    text('country', 'Country the run belongs to'),
+                    text('arr', 'ARR', { tooltip: 'Annual Recurring Revenue for the client.' }),
+                    text('entityName', 'Entity Name'),
+                    area('affectedPeople', 'Name & Role IDs of affected employee(s) / admin(s), if applicable', {
+                        rows: 4,
+                        placeholder: 'Example:\nJane Doe | 68c83622189b9c09f943f2b3\nAdmin Sam Lee | 68c83622189b9c09f943f2b1'
+                    }),
+                    selectField('eeOrContractor', 'Is this an Employee/Contractor?', ['', 'Employee', 'Contractor', 'Admin', 'Both / multiple', 'n/a']),
+                    area('payrunLink', 'Link to payrun with payrun ID and Check Date of Run', {
+                        rows: 3,
+                        placeholder: 'Example: https://... | Pay run ID 69139a432589dcba714f7c11 | Check date 31 Aug 2025'
+                    }),
+                    selectField('escalated', 'Escalated client', ['No', 'Yes'], { defaultValue: 'No' }),
+                    selectField('peoCustomer', 'PEO Customer', ['No', 'Yes'], { defaultValue: 'No' }),
+                    {
+                        id: 'troubleshootingIntro',
+                        type: 'html',
+                        skipCompile: true,
+                        section: 'Troubleshooting actions taken so far',
+                        html: '<p class="hint">Outline the actions you have already taken to troubleshoot the issue during your pre check. Complete each applicable checkbox and the follow-up fields.</p>'
+                    },
+                    checkbox('tsLogrocket', 'LogRocket reviewed', {
+                        compileSection: '\n**Troubleshooting actions taken so far:**\n'
+                    }),
+                    text('logrocketLink', 'LogRocket link attached with support screenshots', {
+                        conditional: true,
+                        dependencyId: 'tsLogrocket',
+                        dependencyValue: 'Yes',
+                        isSubField: true
+                    }),
+                    text('logrocketTime', 'Confirm the time to review on the LogRocket recording', {
+                        conditional: true,
+                        dependencyId: 'tsLogrocket',
+                        dependencyValue: 'Yes',
+                        isSubField: true,
+                        placeholder: 'Example: 1:12–1:40'
+                    }),
+                    checkbox('tsDebugger', 'Debugger reviewed'),
+                    selectField('employeeDebugger', 'Employee debugger', ['', 'Yes', 'No', 'n/a'], {
+                        conditional: true,
+                        dependencyId: 'tsDebugger',
+                        dependencyValue: 'Yes',
+                        isSubField: true
+                    }),
+                    selectField('companyDebugger', 'Company debugger', ['', 'Yes', 'No', 'n/a'], {
+                        conditional: true,
+                        dependencyId: 'tsDebugger',
+                        dependencyValue: 'Yes',
+                        isSubField: true
+                    }),
+                    area('debuggerFindings', 'Key findings summarized with screenshots to support', {
+                        conditional: true,
+                        dependencyId: 'tsDebugger',
+                        dependencyValue: 'Yes',
+                        isSubField: true,
+                        rows: 4
+                    }),
+                    checkbox('tsScreenshots', 'Screenshots captured'),
+                    area('screenshotFrontEnd', 'Front End view of Error state / incorrect output', {
+                        conditional: true,
+                        dependencyId: 'tsScreenshots',
+                        dependencyValue: 'Yes',
+                        isSubField: true,
+                        rows: 4
+                    }),
+                    area('screenshotFindings', 'Key findings summarized', {
+                        conditional: true,
+                        dependencyId: 'tsScreenshots',
+                        dependencyValue: 'Yes',
+                        isSubField: true,
+                        rows: 4
+                    }),
+                    checkbox('tsDemo', 'Tested on Demo Account'),
+                    selectField('demoRecreated', 'Were you able to recreate the situation on your demo', ['', 'Yes', 'No'], {
+                        conditional: true,
+                        dependencyId: 'tsDemo',
+                        dependencyValue: 'Yes',
+                        isSubField: true
+                    }),
+                    selectField('companyOrGeneral', 'Confirm if Company specific or General system functionality', ['', 'Company specific', 'General system functionality', 'Unknown'], {
+                        conditional: true,
+                        dependencyId: 'tsDemo',
+                        dependencyValue: 'Yes',
+                        isSubField: true
+                    }),
+                    checkbox('tsPlaybooks', 'Playbooks/Content review'),
+                    area('playbookContent', 'Confirm the relevant content used to support your findings', {
+                        conditional: true,
+                        dependencyId: 'tsPlaybooks',
+                        dependencyValue: 'Yes',
+                        isSubField: true,
+                        rows: 4
+                    }),
+                    checkbox('tsRiskEval', 'Risk Eval ID'),
+                    text('riskEvalId', 'Risk Eval ID', {
+                        conditional: true,
+                        dependencyId: 'tsRiskEval',
+                        dependencyValue: 'Yes',
+                        isSubField: true,
+                        hint: 'Relevant for Banking expediting requests that Risk team has approved'
+                    }),
+                    checkboxes('engAskTypes', 'Pick the relevant ask types', [
+                        'Fix a bug',
+                        'Investigate root cause',
+                        'Confirm expected behavior',
+                        'Data correction'
+                    ], {
+                        section: 'Action required from Eng',
+                        compileSection: '\n**Action required from Eng:**\n',
+                        hint: 'Select every ask that applies.'
+                    }),
+                    area('engExpectedOutcome', 'Expected outcome', {
+                        rows: 3,
+                        hint: 'Used in the required sentence: Engineering is requested to [action] so that [expected outcome].',
+                        placeholder: 'Example: paystub PDFs generate for terminated EEs in the impacted run'
+                    }),
+                    text('engSentence', 'Required sentence', {
+                        readOnly: true,
+                        tooltip: 'Auto-built from the selected ask types and expected outcome.'
+                    }),
+                    selectField('officehours', 'Did you take this to OH or speak with a Lead?', ['No', 'Yes'], {
+                        defaultValue: 'No'
+                    }),
+                    text('ohName', 'Who was the Lead who approved the Jira ticket?', {
+                        conditional: true,
+                        dependencyId: 'officehours',
+                        dependencyValue: 'Yes',
+                        isSubField: true
+                    }),
+                    area('productSpecificDetails', 'Product-Specific Issue Details', {
+                        section: 'Product-Specific Issue Details',
+                        compileSection: '\n**Product-Specific Issue Details:**\n',
+                        hint: 'Some products require additional information. Include them if this Jira is being created for that board. Review the product grid and add the extra ENG details here.',
+                        rows: 6,
+                        placeholder: 'Example: Product board: Spend\nAdditional ENG fields: card last 4, transaction ID, merchant'
+                    }),
+                    selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                        defaultValue: 'No',
+                        compileLabel: 'Have you included all of requested information?'
+                    })
+                ]
+            },
             {
                 id: 'global-payroll',
                 name: 'Global Payroll',
@@ -586,13 +804,45 @@
         }
 
         function captureOpenValues() {
-            document.querySelectorAll('#formRoot .gp-input').forEach(function (input) {
-                if (input.id) savedValues[input.id] = input.value;
+            document.querySelectorAll('#formRoot input, #formRoot textarea, #formRoot select').forEach(function (input) {
+                if (!input.id && !input.getAttribute('data-group')) return;
+                if (input.type === 'checkbox' && input.getAttribute('data-group')) return;
+                if (input.type === 'checkbox') {
+                    savedValues[input.id] = input.checked ? 'Yes' : 'No';
+                } else if (input.id) {
+                    savedValues[input.id] = input.value;
+                }
             });
+            document.querySelectorAll('#formRoot [data-checkbox-group]').forEach(function (wrap) {
+                const groupId = wrap.getAttribute('data-checkbox-group');
+                savedValues[groupId] = getCheckboxGroupValues(groupId);
+            });
+        }
+
+        function getCheckboxGroupValues(groupId) {
+            return Array.from(document.querySelectorAll('input[data-group="' + groupId + '"]:checked')).map(function (input) {
+                return input.value;
+            });
+        }
+
+        function dependencyMatches(dependency, expected) {
+            if (!dependency) return false;
+            if (dependency.type === 'checkbox') {
+                const checked = dependency.checked;
+                if (expected === 'Yes') return checked;
+                if (expected === 'No') return !checked;
+            }
+            return String(dependency.value).trim() === String(expected);
         }
 
         function fieldWrapperId(field) {
             return field.id + 'Wrap';
+        }
+
+        function restoreCheckbox(input, field) {
+            if (Object.prototype.hasOwnProperty.call(savedValues, field.id)) {
+                input.checked = savedValues[field.id] === 'Yes';
+            }
         }
 
         function renderField(field) {
@@ -604,6 +854,59 @@
             if (field.type === 'html') {
                 wrap.innerHTML = field.html || '';
                 wrap.classList.add('html-block');
+                return wrap;
+            }
+
+            if (field.type === 'checkbox') {
+                wrap.classList.add('checkbox-row');
+                if (field.isSubField) wrap.classList.add('sub-field');
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.id = field.id;
+                restoreCheckbox(input, field);
+                const label = document.createElement('label');
+                label.className = 'gp-label';
+                label.setAttribute('for', field.id);
+                label.textContent = field.label;
+                wrap.appendChild(input);
+                wrap.appendChild(label);
+                if (field.hint) {
+                    const hint = document.createElement('span');
+                    hint.className = 'hint';
+                    hint.textContent = field.hint;
+                    wrap.appendChild(hint);
+                }
+                return wrap;
+            }
+
+            if (field.type === 'checkboxes') {
+                wrap.setAttribute('data-checkbox-group', field.id);
+                const label = document.createElement('div');
+                label.className = 'gp-label';
+                label.textContent = field.label;
+                wrap.appendChild(label);
+                if (field.hint) {
+                    const hint = document.createElement('span');
+                    hint.className = 'hint';
+                    hint.textContent = field.hint;
+                    wrap.appendChild(hint);
+                }
+                const saved = savedValues[field.id] || [];
+                (field.options || []).forEach(function (optionValue, index) {
+                    const row = document.createElement('label');
+                    row.className = 'checklist-item';
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.setAttribute('data-group', field.id);
+                    input.value = optionValue;
+                    input.id = field.id + '_' + index;
+                    if (saved.indexOf(optionValue) !== -1) input.checked = true;
+                    const span = document.createElement('span');
+                    span.textContent = optionValue;
+                    row.appendChild(input);
+                    row.appendChild(span);
+                    wrap.appendChild(row);
+                });
                 return wrap;
             }
 
@@ -671,7 +974,7 @@
                 const dependency = document.getElementById(field.dependencyId);
                 const input = document.getElementById(field.id);
                 if (!wrap || !dependency) return;
-                const visible = dependency.value.trim() === field.dependencyValue;
+                const visible = dependencyMatches(dependency, field.dependencyValue);
                 wrap.style.display = visible ? 'block' : 'none';
                 if (!visible && input && !Object.prototype.hasOwnProperty.call(savedValues, field.id)) {
                     input.value = '';
@@ -703,26 +1006,47 @@
             savedValues.requiredApprovers = band.approvers;
         }
 
+        function syncEngSentence() {
+            const sentence = document.getElementById('engSentence');
+            const outcome = document.getElementById('engExpectedOutcome');
+            if (!sentence) return;
+            const checked = getCheckboxGroupValues('engAskTypes').map(function (item) {
+                return item.toLowerCase();
+            });
+            const action = checked.length ? checked.join(' and ') : '[action]';
+            const result = outcome && outcome.value.trim() ? outcome.value.trim() : '[expected outcome]';
+            sentence.value = 'Engineering is requested to ' + action + ' so that ' + result + '.';
+            savedValues.engSentence = sentence.value;
+        }
+
         function bindBoardEvents(board) {
             board.fields.forEach(function (field) {
+                if (field.type === 'html') return;
+                if (field.type === 'checkboxes') {
+                    document.querySelectorAll('input[data-group="' + field.id + '"]').forEach(function (input) {
+                        input.addEventListener('change', function () {
+                            savedValues[field.id] = getCheckboxGroupValues(field.id);
+                            syncConditionals(board);
+                            syncEngSentence();
+                        });
+                    });
+                    return;
+                }
                 const input = document.getElementById(field.id);
-                if (!input || field.type === 'html') return;
-                input.addEventListener('input', function () {
-                    savedValues[field.id] = input.value;
+                if (!input) return;
+                const handler = function () {
+                    savedValues[field.id] = input.type === 'checkbox' ? (input.checked ? 'Yes' : 'No') : input.value;
                     if (field.id === 'confirmation') checkConfirmationStatus();
                     if (field.id === 'waiverAmount') syncWaiverCategory();
                     if (field.id === 'amountCategory') syncApproversFromCategory();
+                    if (field.id === 'engExpectedOutcome') syncEngSentence();
                     syncConditionals(board);
-                });
-                input.addEventListener('change', function () {
-                    savedValues[field.id] = input.value;
-                    if (field.id === 'confirmation') checkConfirmationStatus();
-                    if (field.id === 'waiverAmount') syncWaiverCategory();
-                    if (field.id === 'amountCategory') syncApproversFromCategory();
-                    syncConditionals(board);
-                });
+                };
+                input.addEventListener('input', handler);
+                input.addEventListener('change', handler);
             });
             syncWaiverCategory();
+            syncEngSentence();
         }
 
         function renderBoard(boardId) {
@@ -791,12 +1115,10 @@
 
             board.fields.forEach(function (field) {
                 if (field.skipCompile) return;
-                const inputElement = document.getElementById(field.id);
-                if (!inputElement) return;
 
                 if (field.conditional) {
                     const dependencyElement = document.getElementById(field.dependencyId);
-                    if (!dependencyElement || dependencyElement.value.trim() !== field.dependencyValue) {
+                    if (!dependencyMatches(dependencyElement, field.dependencyValue)) {
                         return;
                     }
                 }
@@ -806,10 +1128,31 @@
                 }
 
                 const label = (field.compileLabel || field.label || '').trim();
+
+                if (field.type === 'checkbox') {
+                    const inputElement = document.getElementById(field.id);
+                    if (!inputElement) return;
+                    compiledText += (inputElement.checked ? '☑ ' : '☐ ') + label + '\n\n';
+                    return;
+                }
+
+                if (field.type === 'checkboxes') {
+                    compiledText += '*' + label + '*\n';
+                    (field.options || []).forEach(function (optionValue) {
+                        const checked = getCheckboxGroupValues(field.id).indexOf(optionValue) !== -1;
+                        compiledText += (checked ? '☑ ' : '☐ ') + optionValue + '\n';
+                    });
+                    compiledText += '\n';
+                    return;
+                }
+
+                const inputElement = document.getElementById(field.id);
+                if (!inputElement) return;
+
                 let value = inputElement.value.trim();
                 compiledText += '*' + label + '*\n';
 
-                if (field.id === 'officehours' && value === 'Yes - Jira Advised') {
+                if (field.id === 'officehours' && (value === 'Yes - Jira Advised' || value === 'Yes')) {
                     const ohNameInput = document.getElementById('ohName');
                     const ohNameValue = ohNameInput ? ohNameInput.value.trim() : '';
                     if (ohNameValue) value = value + ' (Auth by: ' + ohNameValue + ')';
@@ -827,13 +1170,26 @@
             const board = getBoard(currentBoardId);
             if (!board) return;
             board.fields.forEach(function (field) {
+                if (field.type === 'html') return;
+                if (field.type === 'checkboxes') {
+                    document.querySelectorAll('input[data-group="' + field.id + '"]').forEach(function (input) {
+                        input.checked = false;
+                    });
+                    delete savedValues[field.id];
+                    return;
+                }
                 const input = document.getElementById(field.id);
                 if (!input) return;
-                input.value = field.defaultValue || '';
+                if (input.type === 'checkbox') {
+                    input.checked = false;
+                } else {
+                    input.value = field.defaultValue || '';
+                }
                 delete savedValues[field.id];
             });
             document.getElementById('compiledTextArea').value = '';
             syncConditionals(board);
+            syncEngSentence();
             checkConfirmationStatus();
         }
 
