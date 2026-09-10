@@ -219,6 +219,29 @@
             width: 380px;
         }
 
+        .amount-table {
+            width: 95%;
+            max-width: 720px;
+            border-collapse: collapse;
+            margin: 8px 0 12px;
+            font-size: 0.95em;
+        }
+
+        .amount-table th,
+        .amount-table td {
+            border: 1px solid #ccc;
+            padding: 8px 10px;
+            text-align: left;
+        }
+
+        .amount-table th {
+            background: #eef3f9;
+        }
+
+        .html-block {
+            margin-top: 8px;
+        }
+
         #emptyState {
             margin-top: 24px;
             padding: 18px;
@@ -236,6 +259,7 @@
     <h1 class="page-title">Rippling Jira Generator</h1>
     <p class="page-subtitle">
         Choose the Jira board / ticket type first. The intake fields and compiled Jira text switch to that board’s format.
+        Available formats: Global Payroll, BEXC Invoice Waiver, and BEXC Account Exemptions.
     </p>
 
     <div class="board-picker">
@@ -248,7 +272,7 @@
         <p class="board-help" id="boardHelp">Select a board to load the matching Jira format.</p>
     </div>
 
-    <div id="emptyState">No board selected yet. Use the dropdown above to load Global Payroll, Account Operations, or another Rippling format.</div>
+    <div id="emptyState">No board selected yet. Use the dropdown above to load Global Payroll, BEXC Invoice Waiver, or BEXC Account Exemptions.</div>
     <div id="formRoot"></div>
 
     <div id="formActions">
@@ -336,47 +360,50 @@
             return fields;
         }
 
-        function opsCloseFields(sectionTitle, extras) {
-            extras = extras || [];
-            const prefix = '\n**' + sectionTitle + '**\n';
-            const fields = extras.map(function (field, index) {
-                if (index === 0 && !field.section) {
-                    field.section = prefix;
-                }
-                return field;
-            });
+        const AMOUNT_CATEGORIES = [
+            { label: 'Under $1,000', approvers: 'No approver needed', min: 0, max: 1000 },
+            { label: '$1,000 – $5,000', approvers: "Requester's Manager", min: 1000, max: 5000 },
+            { label: '$5,000 – $10,000', approvers: "Requester's Manager + Director", min: 5000, max: 10000 },
+            { label: '$10,000 – $50,000', approvers: "Requester's Manager + Director + VP", min: 10000, max: 50000 },
+            { label: '$50,000+', approvers: "Requester's Manager + Director + VP + Vipin Sethi (Accounting)", min: 50000, max: Infinity }
+        ];
 
-            const letterStart = extras.length;
-            const letters = 'abcdefghijklmnopqrstuvwxyz';
-            function letter(offset) {
-                return letters.charAt(letterStart + offset) + '. ';
+        function categoryForAmount(amount) {
+            for (let i = 0; i < AMOUNT_CATEGORIES.length; i++) {
+                const band = AMOUNT_CATEGORIES[i];
+                if (amount >= band.min && amount < band.max) return band;
             }
+            return AMOUNT_CATEGORIES[AMOUNT_CATEGORIES.length - 1];
+        }
 
-            fields.push(selectField('officehours', letter(0) + 'Did you confirm in OH/Lead?', ['No', 'Yes - Jira Advised'], {
-                defaultValue: 'No',
-                tooltip: 'Did you confirm the necessity of a Jira with an Office Hour session or Team Lead?'
-            }));
-            fields.push(text('ohName', 'Approving Lead/OH Name', {
-                conditional: true,
-                dependencyId: 'officehours',
-                dependencyValue: 'Yes - Jira Advised',
-                isSubField: true,
-                skipCompile: true
-            }));
-            fields.push(selectField('workaround', letter(1) + 'Is there a workaround?', ['No', 'Yes'], {
-                defaultValue: 'No',
-                tooltip: 'Is there a temporary solution for the client to mitigate the issue?'
-            }));
-            fields.push(area('workaroundDetails', 'Details of Workaround Provided', {
-                conditional: true,
-                dependencyId: 'workaround',
-                dependencyValue: 'Yes',
-                isSubField: true
-            }));
-            fields.push(selectField('confirmation', letter(2) + 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
-                defaultValue: 'No'
-            }));
-            return fields;
+        function parseAmount(raw) {
+            const cleaned = String(raw || '').replace(/[^0-9.]/g, '');
+            if (!cleaned) return null;
+            const value = parseFloat(cleaned);
+            return isNaN(value) ? null : value;
+        }
+
+        function bexcAccountFields(troubleshootingHint) {
+            return [
+                text('companyID', 'Company ID', {
+                    section: 'Account and EE Details',
+                    compileSection: '\n**Account and EE Details:**\n',
+                    tooltip: 'The unique identifier for the company.'
+                }),
+                text('arr', 'ARR', { tooltip: 'Annual Recurring Revenue for the client.' }),
+                text('entityName', 'Entity Name', { tooltip: 'The legal entity name of the company.' }),
+                selectField('escalated', 'Escalated Client', ['No', 'Yes'], {
+                    defaultValue: 'No',
+                    tooltip: 'Is this client flagged as escalated?'
+                }),
+                selectField('peoCustomer', 'PEO Customer', ['No', 'Yes'], {
+                    defaultValue: 'No',
+                    tooltip: 'Is this a PEO customer?'
+                }),
+                area('troubleshooting', 'Troubleshooting actions taken so far', {
+                    hint: troubleshootingHint
+                })
+            ];
         }
 
         const BOARDS = [
@@ -469,242 +496,86 @@
                 ])
             },
             {
-                id: 'account-operations',
-                name: 'Account Operations',
-                help: 'Use this format for access, company configuration, data correction, and account-setup work. File on the Account Operations board.',
-                titleHint: 'Company Name | Request type | Brief description',
-                titlePlaceholder: 'Example: Acme Corp | Access | Super admin cannot invite new billing admins',
+                id: 'bexc-invoice-waiver',
+                name: 'BEXC — Invoice Waiving off request',
+                issueType: 'Customer Task',
+                help: 'File on the BEXC board. Use this format to request waiving customer invoices, including amount category and required approvers.',
+                titleHint: 'Client Name | Brief description of issue',
+                titlePlaceholder: 'Example: Acme Corp | Waive duplicate September platform invoice',
                 fields: [
                     area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
-                    area('problemDescription', 'a. What is the problem?', {
-                        section: '1. Issue Description & Context',
-                        compileSection: '\n**1. Issue Description & Context**\n',
-                        hint: 'What is broken or blocked? What is the customer outcome?',
-                        placeholder: 'Example: Super admin at Acme cannot invite a new billing admin. Invite emails are not sent and no pending invite appears on the Users page.'
+                    area('whatIsHappening', 'What is happening', {
+                        section: 'What is happening',
+                        compileSection: '\n**What is happening:**\n',
+                        compileLabel: 'What is happening',
+                        hint: 'Please clarify why we need to waive the invoices for the customer and what occurred that we need to waive these invoices.',
+                        placeholder: 'Example: Customer was billed twice for the September platform fee after a contract correction. AM approved waiving the duplicate invoice.'
+                    })
+                ].concat(bexcAccountFields('Share the steps taken so far and confirm whether you have received approval from the AM or the relevant team to waive the invoices. Attach the Slack thread confirmation or a screenshot of the AM\'s approval.')).concat([
+                    text('waiverAmount', 'Waiver amount', {
+                        section: 'Waiver amount',
+                        compileSection: '\n**Waiver amount:**\n',
+                        hint: 'Please mention the amount that needs to be waived.',
+                        placeholder: 'Example: $2,500'
                     }),
-                    area('currentVsExpected', 'b. Current vs expected', {
-                        hint: 'List factual mismatches that can be verified',
-                        placeholder: 'Example:\nCurrent: Invite action returns success, no email sent, user not listed\nExpected: Invite email sent and pending invite visible on Users page'
+                    {
+                        id: 'amountCategoryTable',
+                        type: 'html',
+                        skipCompile: true,
+                        section: 'Amount Category',
+                        html: '<div class="html-block"><p class="hint">Required approvers are filled from the waiver amount using this matrix.</p><table class="amount-table"><thead><tr><th>Amount</th><th>Required Approvers</th></tr></thead><tbody><tr><td>Under $1,000</td><td>No approver needed</td></tr><tr><td>$1,000 – $5,000</td><td>Requester\'s Manager</td></tr><tr><td>$5,000 – $10,000</td><td>Requester\'s Manager + Director</td></tr><tr><td>$10,000 – $50,000</td><td>Requester\'s Manager + Director + VP</td></tr><tr><td>$50,000+</td><td>Requester\'s Manager + Director + VP + Vipin Sethi (Accounting)</td></tr></tbody></table></div>'
+                    },
+                    selectField('amountCategory', 'Amount Category', AMOUNT_CATEGORIES.map(function (band) { return band.label; }), {
+                        compileSection: '\n**Amount Category:**\n'
                     }),
-                    area('businessImpact', 'c. Business impact', {
-                        rows: 4,
-                        hint: 'Who is blocked, what process is delayed, and how the customer is affected'
+                    text('requiredApprovers', 'Required Approvers', {
+                        defaultValue: '',
+                        readOnly: true,
+                        tooltip: 'Auto-filled from the waiver amount / amount category.'
                     }),
-                    area('otherinfo', 'd. Supporting documentation'),
-                    area('impactedUsers', 'e. Impacted users / roles', { hint: 'Name and Role ID (or user ID) required' }),
-                    area('impactedObjects', 'f. Impacted account objects', {
-                        hint: 'Company, entity, subscription, invoice, contract, or other object IDs'
+                    area('whyDebitedAndWaiving', 'Why were the charges initially debited, and why are we waiving them now?', {
+                        section: 'Action required',
+                        compileSection: '\n**Action required:**\nThis Jira is for reference.\n\n',
+                        hint: 'This Jira is for reference. Explain why the charges were initially debited and why they are being waived now.'
                     }),
-                    text('customerDeadline', 'g. Customer deadline'),
-                    area('reproSteps', 'h. Steps to reproduce / actions already taken'),
-                    area('actionReqEng', 'i. Ask of Account Operations / Engineering', {
-                        hint: 'State exactly what must be done or answered.'
+                    area('underlyingIssueSteps', 'What steps are being taken to address and resolve the underlying issue that led to the waiver of invoices?', {
+                        hint: 'Describe the fix or process change so this does not recur.'
                     }),
-                    text('fixDate', 'j. Date issue must be fixed by'),
-                    area('fixDateReason', 'k. Why must it be fixed by this date?', { rows: 4 })
-                ].concat(customerSection({ includeSegment: true, includeOwner: true })).concat([
-                    selectField('requestType', 'a. Request type', ['', 'Access / permissions', 'Account configuration', 'Billing / invoicing', 'Contract / SKU change', 'Data correction', 'Offboarding / account close', 'Implementation blocker', 'Other'], {
-                        section: '3. Account Operations Specific Details',
-                        compileSection: '\n**3. Account Operations Specific Details**\n',
-                        tooltip: 'The type of Account Operations work being requested.'
-                    }),
-                    selectField('productArea', 'b. Product / workflow area', ['', 'Company settings', 'Users & roles', 'Billing', 'Integrations', 'Implementation', 'Other']),
-                    selectField('environment', 'c. Environment', ['Production', 'Sandbox', 'Both'], { defaultValue: 'Production' }),
-                    selectField('officehours', 'd. Did you confirm in OH/Lead?', ['No', 'Yes - Jira Advised'], {
+                    selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
                         defaultValue: 'No',
-                        tooltip: 'Did you confirm the necessity of a Jira with an Office Hour session or Team Lead?'
-                    }),
-                    text('ohName', 'Approving Lead/OH Name', {
-                        conditional: true,
-                        dependencyId: 'officehours',
-                        dependencyValue: 'Yes - Jira Advised',
-                        isSubField: true,
-                        skipCompile: true
-                    }),
-                    selectField('workaround', 'e. Is there a workaround?', ['No', 'Yes'], {
-                        defaultValue: 'No',
-                        tooltip: 'Is there a temporary solution for the client to mitigate the issue?'
-                    }),
-                    area('workaroundDetails', 'Details of Workaround Provided', {
-                        conditional: true,
-                        dependencyId: 'workaround',
-                        dependencyValue: 'Yes',
-                        isSubField: true
-                    }),
-                    area('relatedLinks', 'f. Related Salesforce / ticket / Slack links', { rows: 4 }),
-                    selectField('confirmation', 'g. Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
-                        defaultValue: 'No'
+                        compileLabel: 'Have you included all of requested information?'
                     })
                 ])
             },
             {
-                id: 'insurance-benefits',
-                name: 'Insurance / Benefits',
-                help: 'Use this format for carrier, enrollment, deduction, and coverage issues. File on the Insurance / Benefits board.',
-                titleHint: 'Client Name | Carrier or plan | Brief description',
-                titlePlaceholder: 'Example: Acme Corp | Aetna medical | Dependent missing from enrollment feed',
+                id: 'bexc-account-exemptions',
+                name: 'BEXC — Account exemptions',
+                issueType: 'Customer Task',
+                help: 'File on the BEXC board as issue type Customer Task. Use this format to request a customer account exemption and how long it is needed.',
+                titleHint: 'Client Name | Brief description of issue',
+                titlePlaceholder: 'Example: Acme Corp | Temporary exemption from spend policy block',
                 fields: [
                     area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
-                    area('problemDescription', 'a. What is the problem?', {
-                        section: '1. Issue Description & Context',
-                        compileSection: '\n**1. Issue Description & Context**\n',
-                        hint: 'What broke in enrollment, eligibility, deductions, or carrier data?'
+                    area('whatIsHappening', 'What is happening', {
+                        section: 'What is happening',
+                        compileSection: '\n**What is happening:**\n',
+                        compileLabel: 'What is happening',
+                        hint: 'Please clarify why we need to grant an exemption to the customer and explain the business justification for providing this exemption.',
+                        placeholder: 'Example: Customer needs a 30-day exemption from the new spend-control rollout while finance finishes vendor mapping.'
+                    })
+                ].concat(bexcAccountFields('Please share the steps that have been taken to resolve the issue.')).concat([
+                    area('exemptionDuration', 'How long is the exemption needed for?', {
+                        section: 'Action required',
+                        compileSection: '\n**Action required:**\n',
+                        compileLabel: 'How long is the exemption needed for?',
+                        hint: 'Please clarify how long the exemption is needed for.',
+                        placeholder: 'Example: 30 days, through 10 Oct 2026'
                     }),
-                    area('observableError', 'b. What is the observable error?', { hint: 'Expected vs actual coverage, deduction, or carrier file result' }),
-                    area('otherinfo', 'c. Supporting documentation'),
-                    area('listEEs', 'd. Impacted EE', { hint: 'Employee Name and Role ID required', compileLabel: 'd. Impacted EEs' }),
-                    text('carrierName', 'e. Carrier'),
-                    text('planName', 'f. Plan name / plan ID'),
-                    text('effectiveDate', 'g. Effective date / plan year'),
-                    area('reproSteps', 'h. Steps to reproduce / what was already tried'),
-                    area('actionReqEng', 'i. Ask of Benefits / Engineering'),
-                    text('fixDate', 'j. Date issue must be fixed by'),
-                    area('fixDateReason', 'k. Why must it be fixed by this date?', { rows: 4 })
-                ].concat(customerSection({ includeCompanyName: false })).concat(
-                    opsCloseFields('3. Insurance / Benefits Specific Details', [
-                        selectField('benefitType', 'a. Benefit type', ['', 'Medical', 'Dental', 'Vision', 'Life / Disability', 'FSA / HSA / Commuter', 'Other']),
-                        selectField('issueCategory', 'b. Issue category', ['', 'Enrollment', 'EDI / carrier feed', 'Deduction', 'Eligibility', 'QLE', 'Claims support', 'Other'])
-                    ])
-                )
-            },
-            {
-                id: 'spend-management',
-                name: 'Spend Management',
-                help: 'Use this format for cards, expenses, reimbursements, and spend-policy issues. File on the Spend board.',
-                titleHint: 'Client Name | Spend issue | Brief description',
-                titlePlaceholder: 'Example: Acme Corp | Card | Virtual card declined for approved vendor',
-                fields: [
-                    area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
-                    area('problemDescription', 'a. What is the problem?', {
-                        section: '1. Issue Description & Context',
-                        compileSection: '\n**1. Issue Description & Context**\n'
-                    }),
-                    area('observableError', 'b. What is the observable error?'),
-                    area('otherinfo', 'c. Supporting documentation'),
-                    area('impactedUsers', 'd. Impacted cardholder / employee', { hint: 'Name and Role ID required' }),
-                    text('transactionId', 'e. Transaction / expense ID'),
-                    text('amountMerchant', 'f. Amount and merchant'),
-                    area('reproSteps', 'g. Steps to reproduce / actions already taken'),
-                    area('actionReqEng', 'h. Ask of Spend / Engineering'),
-                    text('fixDate', 'i. Date issue must be fixed by'),
-                    area('fixDateReason', 'j. Why must it be fixed by this date?', { rows: 4 })
-                ].concat(customerSection({ includeCompanyName: false })).concat(
-                    opsCloseFields('3. Spend Specific Details', [
-                        selectField('spendType', 'a. Spend type', ['', 'Physical card', 'Virtual card', 'Reimbursement', 'Bill pay', 'Policy / limits', 'Receipts', 'Other']),
-                        selectField('spendIssue', 'b. Issue category', ['', 'Decline', 'Missing transaction', 'Wrong amount', 'Receipt / OCR', 'Policy block', 'Accounting export', 'Other'])
-                    ])
-                )
-            },
-            {
-                id: 'devices-it',
-                name: 'Devices / IT',
-                help: 'Use this format for hardware orders, shipping, MDM, and device replacement. File on the Devices / IT board.',
-                titleHint: 'Client Name | Device issue | Brief description',
-                titlePlaceholder: 'Example: Acme Corp | Laptop | Order stuck in processing after approval',
-                fields: [
-                    area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
-                    area('problemDescription', 'a. What is the problem?', {
-                        section: '1. Issue Description & Context',
-                        compileSection: '\n**1. Issue Description & Context**\n'
-                    }),
-                    area('observableError', 'b. What is the observable error?'),
-                    area('otherinfo', 'c. Supporting documentation'),
-                    area('impactedUsers', 'd. Impacted employee', { hint: 'Name and Role ID required' }),
-                    text('orderId', 'e. Order ID'),
-                    text('serialNumber', 'f. Serial number / asset tag'),
-                    text('deviceModel', 'g. Device model'),
-                    area('reproSteps', 'h. Steps to reproduce / vendor actions taken'),
-                    area('actionReqEng', 'i. Ask of Devices / IT / Engineering'),
-                    text('fixDate', 'j. Date issue must be fixed by'),
-                    area('fixDateReason', 'k. Why must it be fixed by this date?', { rows: 4 })
-                ].concat(customerSection({ includeCompanyName: false })).concat(
-                    opsCloseFields('3. Devices / IT Specific Details', [
-                        selectField('deviceType', 'a. Device type', ['', 'Laptop', 'Phone', 'Tablet', 'Accessory', 'MDM / software', 'Other']),
-                        selectField('deviceIssue', 'b. Issue category', ['', 'Order / procurement', 'Shipping', 'Enrollment / MDM', 'Replacement', 'Return', 'Warranty', 'Other'])
-                    ])
-                )
-            },
-            {
-                id: 'implementation',
-                name: 'Implementation',
-                help: 'Use this format for onboarding blockers, migration issues, and go-live risks. File on the Implementation board.',
-                titleHint: 'Client Name | Workstream | Blocker',
-                titlePlaceholder: 'Example: Acme Corp | Payroll implementation | Bank account verification blocking go-live',
-                fields: [
-                    area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
-                    area('problemDescription', 'a. What is the blocker?', {
-                        section: '1. Issue Description & Context',
-                        compileSection: '\n**1. Issue Description & Context**\n'
-                    }),
-                    area('observableError', 'b. Current vs expected'),
-                    area('businessImpact', 'c. Go-live / customer impact', { rows: 4 }),
-                    area('otherinfo', 'd. Supporting documentation'),
-                    text('goLiveDate', 'e. Go-live date'),
-                    text('workstream', 'f. Workstream'),
-                    area('reproSteps', 'g. What has already been tried'),
-                    area('actionReqEng', 'h. Ask of Implementation / Engineering'),
-                    text('fixDate', 'i. Date issue must be fixed by'),
-                    area('fixDateReason', 'j. Why must it be fixed by this date?', { rows: 4 })
-                ].concat(customerSection({ includeSegment: true, includeOwner: true })).concat(
-                    opsCloseFields('3. Implementation Specific Details', [
-                        selectField('implType', 'a. Blocker type', ['', 'Data migration', 'Payroll setup', 'Benefits setup', 'Integrations', 'Permissions', 'Training / process', 'Other']),
-                        selectField('environment', 'b. Environment', ['Production', 'Sandbox', 'Both'], { defaultValue: 'Production' })
-                    ])
-                )
-            },
-            {
-                id: 'billing',
-                name: 'Billing',
-                help: 'Use this format for invoices, SKUs, credits, and billing-amount mismatches. File on the Billing board.',
-                titleHint: 'Client Name | Invoice or SKU | Brief description',
-                titlePlaceholder: 'Example: Acme Corp | INV-10482 | Duplicate platform fee on September invoice',
-                fields: [
-                    area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
-                    area('problemDescription', 'a. What is the problem?', {
-                        section: '1. Issue Description & Context',
-                        compileSection: '\n**1. Issue Description & Context**\n'
-                    }),
-                    area('observableError', 'b. Expected vs actual amount'),
-                    area('otherinfo', 'c. Supporting documentation'),
-                    text('invoiceNumber', 'd. Invoice number'),
-                    text('billingPeriod', 'e. Billing period'),
-                    text('skuProduct', 'f. SKU / product'),
-                    area('reproSteps', 'g. What was already reviewed'),
-                    area('actionReqEng', 'h. Ask of Billing / Finance / Engineering'),
-                    text('fixDate', 'i. Date issue must be fixed by'),
-                    area('fixDateReason', 'j. Why must it be fixed by this date?', { rows: 4 })
-                ].concat(customerSection({ includeSegment: true, includeOwner: true })).concat(
-                    opsCloseFields('3. Billing Specific Details', [
-                        selectField('billingType', 'a. Request type', ['', 'Invoice error', 'Credit / refund', 'SKU change', 'Contract vs bill mismatch', 'Tax on invoice', 'Other'])
-                    ])
-                )
-            },
-            {
-                id: 'engineering',
-                name: 'Engineering / Product Bug',
-                help: 'Use this format for product bugs that need engineering investigation across any Rippling product.',
-                titleHint: 'Client Name | Product | Brief description',
-                titlePlaceholder: 'Example: Acme Corp | Spend | Receipt upload spinner never completes',
-                fields: [
-                    area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
-                    area('problemDescription', 'a. What is the problem?', {
-                        section: '1. Issue Description & Context',
-                        compileSection: '\n**1. Issue Description & Context**\n'
-                    }),
-                    area('observableError', 'b. Expected vs actual'),
-                    area('otherinfo', 'c. Supporting documentation', { hint: 'Debugger, Logrocket, HAR, screenshots' }),
-                    area('reproSteps', 'd. Steps to reproduce'),
-                    area('actionReqEng', 'e. Ask of Engineering'),
-                    text('fixDate', 'f. Date issue must be fixed by'),
-                    area('fixDateReason', 'g. Why must it be fixed by this date?', { rows: 4 })
-                ].concat(customerSection({ includeCompanyName: false })).concat(
-                    opsCloseFields('3. Engineering Specific Details', [
-                        text('productName', 'a. Product / surface'),
-                        selectField('severity', 'b. Severity', ['', 'SEV-1', 'SEV-2', 'SEV-3', 'SEV-4']),
-                        selectField('environment', 'c. Environment', ['Production', 'Sandbox', 'Both'], { defaultValue: 'Production' }),
-                        area('featureFlag', 'd. Feature flags / experiment', { rows: 3 })
-                    ])
-                )
+                    selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                        defaultValue: 'No',
+                        compileLabel: 'Have you included all of requested information?'
+                    })
+                ])
             }
         ];
 
@@ -730,6 +601,12 @@
             wrap.id = fieldWrapperId(field);
             if (field.isSubField) wrap.className = 'sub-field';
             if (field.conditional) wrap.style.display = 'none';
+
+            if (field.type === 'html') {
+                wrap.innerHTML = field.html || '';
+                wrap.classList.add('html-block');
+                return wrap;
+            }
 
             const label = document.createElement('label');
             label.className = 'gp-label';
@@ -778,6 +655,7 @@
             input.id = field.id;
             input.className = 'gp-input';
             if (field.placeholder) input.placeholder = field.placeholder;
+            if (field.readOnly) input.readOnly = true;
             if (Object.prototype.hasOwnProperty.call(savedValues, field.id)) {
                 input.value = savedValues[field.id];
             } else if (field.defaultValue) {
@@ -802,21 +680,50 @@
             });
         }
 
+        function syncWaiverCategory() {
+            const amountInput = document.getElementById('waiverAmount');
+            const categoryInput = document.getElementById('amountCategory');
+            const approversInput = document.getElementById('requiredApprovers');
+            if (!amountInput || !categoryInput || !approversInput) return;
+            const amount = parseAmount(amountInput.value);
+            if (amount === null) return;
+            const band = categoryForAmount(amount);
+            categoryInput.value = band.label;
+            approversInput.value = band.approvers;
+            savedValues.amountCategory = band.label;
+            savedValues.requiredApprovers = band.approvers;
+        }
+
+        function syncApproversFromCategory() {
+            const categoryInput = document.getElementById('amountCategory');
+            const approversInput = document.getElementById('requiredApprovers');
+            if (!categoryInput || !approversInput) return;
+            const band = AMOUNT_CATEGORIES.find(function (item) { return item.label === categoryInput.value; });
+            if (!band) return;
+            approversInput.value = band.approvers;
+            savedValues.requiredApprovers = band.approvers;
+        }
+
         function bindBoardEvents(board) {
             board.fields.forEach(function (field) {
                 const input = document.getElementById(field.id);
-                if (!input) return;
+                if (!input || field.type === 'html') return;
                 input.addEventListener('input', function () {
                     savedValues[field.id] = input.value;
                     if (field.id === 'confirmation') checkConfirmationStatus();
+                    if (field.id === 'waiverAmount') syncWaiverCategory();
+                    if (field.id === 'amountCategory') syncApproversFromCategory();
                     syncConditionals(board);
                 });
                 input.addEventListener('change', function () {
                     savedValues[field.id] = input.value;
                     if (field.id === 'confirmation') checkConfirmationStatus();
+                    if (field.id === 'waiverAmount') syncWaiverCategory();
+                    if (field.id === 'amountCategory') syncApproversFromCategory();
                     syncConditionals(board);
                 });
             });
+            syncWaiverCategory();
         }
 
         function renderBoard(boardId) {
@@ -877,7 +784,11 @@
                 return;
             }
 
-            let compiledText = '*Jira board:* ' + board.name + '\n\n';
+            let compiledText = '*Jira board:* ' + board.name + '\n';
+            if (board.issueType) {
+                compiledText += '*Issue Type:* ' + board.issueType + '\n';
+            }
+            compiledText += '\n';
 
             board.fields.forEach(function (field) {
                 if (field.skipCompile) return;
