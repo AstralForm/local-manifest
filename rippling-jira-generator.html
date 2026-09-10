@@ -10,10 +10,11 @@
             padding: 20px;
             max-width: 960px;
             color: #222;
+            font-size: 12px;
         }
 
         .page-title {
-            font-size: 1.8em;
+            font-size: 16px;
             margin: 0 0 8px 0;
         }
 
@@ -21,6 +22,7 @@
             color: #555;
             margin-bottom: 20px;
             line-height: 1.4;
+            font-size: 12px;
         }
 
         .board-picker {
@@ -38,8 +40,8 @@
         #boardSelect {
             width: 420px;
             max-width: 100%;
-            height: 42px;
-            font-size: 1.05em;
+            height: 38px;
+            font-size: 12px;
             font-weight: bold;
         }
 
@@ -47,6 +49,7 @@
             margin: 10px 0 0;
             color: #334;
             line-height: 1.45;
+            font-size: 12px;
         }
 
         .tooltip {
@@ -88,6 +91,7 @@
             display: block;
             margin-top: 15px;
             margin-bottom: 5px;
+            font-size: 14px;
         }
 
         .hint {
@@ -95,25 +99,27 @@
             color: #555;
             font-style: italic;
             margin-bottom: 6px;
+            font-size: 12px;
         }
 
         .section-header {
-            font-size: 1.4em;
+            font-size: 16px;
             margin-top: 30px;
             margin-bottom: 10px;
             border-bottom: 2px solid #ccc;
             padding-bottom: 5px;
             color: #000;
+            font-weight: bold;
         }
 
-        .gp-input, #compiledTextArea {
+        .gp-input, #compiledTextArea, #compiledPreview {
             width: 95%;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
             resize: vertical;
-            font-size: 1em;
+            font-size: 12px;
         }
 
         .gp-input[type="text"], select.gp-input {
@@ -127,10 +133,40 @@
         }
 
         #compiledTextArea {
+            display: none;
+        }
+
+        #compiledPreview {
             background-color: #e9ecef;
             border: 2px dashed #007bff;
-            font-family: 'Courier New', Courier, monospace;
-            height: 280px;
+            min-height: 280px;
+            font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+            overflow: auto;
+        }
+
+        #compiledPreview h2.jira-h {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 18px 0 6px;
+            line-height: 1.3;
+        }
+
+        #compiledPreview h2.jira-h:first-child {
+            margin-top: 0;
+        }
+
+        #compiledPreview h3.jira-s {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 12px 0 4px;
+            line-height: 1.3;
+        }
+
+        #compiledPreview p.jira-body {
+            font-size: 12px;
+            margin: 0 0 10px;
+            line-height: 1.45;
+            white-space: pre-wrap;
         }
 
         button {
@@ -318,11 +354,12 @@
 
     <div id="outputBlock">
         <br>
-        <label for="compiledTextArea" class="roe-label">
+        <label class="roe-label">
             Jira Text — Command A (select all), Command C (copy), Command V (paste) into your Jira!<br>
             <i>Do not Command Shift V (plain text paste) or formatting is lost.</i>
         </label>
-        <textarea id="compiledTextArea" rows="10"></textarea>
+        <div id="compiledPreview" contenteditable="true" aria-label="Jira Text"></div>
+        <textarea id="compiledTextArea" rows="10" aria-hidden="true"></textarea>
     </div>
 
     <script>
@@ -349,7 +386,8 @@
 
             if (includeName) {
                 fields.push(text('companyName', 'a. Company name', {
-                    section: '\n**2. Customer Information**\n',
+                    section: '2. Customer Information',
+                    compileSection: '2. Customer Information',
                     tooltip: 'Legal or display name of the customer company.'
                 }));
                 fields.push(text('companyID', 'b. Company ID', { tooltip: 'The unique identifier for the company.' }));
@@ -373,7 +411,8 @@
                 }
             } else {
                 fields.push(text('companyID', 'a. Company ID', {
-                    section: '\n**2. Customer Information**\n',
+                    section: '2. Customer Information',
+                    compileSection: '2. Customer Information',
                     tooltip: 'The unique identifier for the company.'
                 }));
                 fields.push(text('country', 'b. Country', { tooltip: 'The country where the issue is occurring.' }));
@@ -610,7 +649,8 @@
                         conditional: true,
                         dependencyId: 'officehours',
                         dependencyValue: 'Yes',
-                        isSubField: true
+                        isSubField: true,
+                        skipCompile: true
                     }),
                     area('productSpecificDetails', 'Product-Specific Issue Details', {
                         section: 'Product-Specific Issue Details',
@@ -743,7 +783,8 @@
                         html: '<div class="html-block"><p class="hint">Required approvers are filled from the waiver amount using this matrix.</p><table class="amount-table"><thead><tr><th>Amount</th><th>Required Approvers</th></tr></thead><tbody><tr><td>Under $1,000</td><td>No approver needed</td></tr><tr><td>$1,000 – $5,000</td><td>Requester\'s Manager</td></tr><tr><td>$5,000 – $10,000</td><td>Requester\'s Manager + Director</td></tr><tr><td>$10,000 – $50,000</td><td>Requester\'s Manager + Director + VP</td></tr><tr><td>$50,000+</td><td>Requester\'s Manager + Director + VP + Vipin Sethi (Accounting)</td></tr></tbody></table></div>'
                     },
                     selectField('amountCategory', 'Amount Category', AMOUNT_CATEGORIES.map(function (band) { return band.label; }), {
-                        compileSection: '\n**Amount Category:**\n'
+                        hideLabel: true,
+                        compileSection: 'Amount Category'
                     }),
                     text('requiredApprovers', 'Required Approvers', {
                         defaultValue: '',
@@ -752,7 +793,8 @@
                     }),
                     area('whyDebitedAndWaiving', 'Why were the charges initially debited, and why are we waiving them now?', {
                         section: 'Action required',
-                        compileSection: '\n**Action required:**\nThis Jira is for reference.\n\n',
+                        compileSection: 'Action required',
+                        compileIntro: 'This Jira is for reference.',
                         hint: 'This Jira is for reference. Explain why the charges were initially debited and why they are being waived now.'
                     }),
                     area('underlyingIssueSteps', 'What steps are being taken to address and resolve the underlying issue that led to the waiver of invoices?', {
@@ -801,6 +843,41 @@
 
         function getBoard(id) {
             return BOARDS.find(function (board) { return board.id === id; });
+        }
+
+        function normalizeTitle(value) {
+            return String(value || '')
+                .replace(/\*\*/g, '')
+                .replace(/[*_#]/g, '')
+                .replace(/:$/g, '')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+        }
+
+        function titlesMatch(left, right) {
+            const a = normalizeTitle(left);
+            const b = normalizeTitle(right);
+            return !!a && !!b && a === b;
+        }
+
+        function headingFromField(field) {
+            const raw = field.compileSection || field.section || '';
+            const match = String(raw).match(/\*\*(.+?)\*\*/);
+            const heading = (match ? match[1] : String(raw))
+                .replace(/\n/g, ' ')
+                .replace(/:$/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+            return heading;
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
         }
 
         function captureOpenValues() {
@@ -910,25 +987,29 @@
                 return wrap;
             }
 
-            const label = document.createElement('label');
-            label.className = 'gp-label';
-            label.setAttribute('for', field.id);
-            if (field.labelHtml) {
-                label.innerHTML = field.labelHtml;
-            } else {
-                label.textContent = field.label;
+            const skipDuplicateLabel = field.hideLabel || (field.section && titlesMatch(field.section, field.compileLabel || field.label));
+
+            if (!skipDuplicateLabel) {
+                const label = document.createElement('label');
+                label.className = 'gp-label';
+                label.setAttribute('for', field.id);
+                if (field.labelHtml) {
+                    label.innerHTML = field.labelHtml;
+                } else {
+                    label.textContent = field.label;
+                }
+                if (field.tooltip) {
+                    const tip = document.createElement('div');
+                    tip.className = 'tooltip';
+                    tip.textContent = 'ⓘ';
+                    const textSpan = document.createElement('span');
+                    textSpan.className = 'tooltiptext';
+                    textSpan.textContent = field.tooltip;
+                    tip.appendChild(textSpan);
+                    label.appendChild(tip);
+                }
+                wrap.appendChild(label);
             }
-            if (field.tooltip) {
-                const tip = document.createElement('div');
-                tip.className = 'tooltip';
-                tip.textContent = 'ⓘ';
-                const textSpan = document.createElement('span');
-                textSpan.className = 'tooltiptext';
-                textSpan.textContent = field.tooltip;
-                tip.appendChild(textSpan);
-                label.appendChild(tip);
-            }
-            wrap.appendChild(label);
 
             if (field.hint) {
                 const hint = document.createElement('span');
@@ -1096,6 +1177,39 @@
             syncConditionals(board);
             checkConfirmationStatus();
             document.getElementById('compiledTextArea').value = '';
+            document.getElementById('compiledPreview').innerHTML = '';
+        }
+
+        function appendHeading(parts, heading) {
+            heading = String(heading || '').replace(/:$/, '').trim();
+            if (!heading) return;
+            if (titlesMatch(heading, parts.lastHeading)) return;
+            parts.lastHeading = heading;
+            parts.html += '<h2 class="jira-h" style="font-size:16px;font-weight:bold;margin:18px 0 6px;">' + escapeHtml(heading) + '</h2>';
+            parts.text += heading + '\n\n';
+        }
+
+        function appendSubheading(parts, label) {
+            label = String(label || '').replace(/:$/, '').trim();
+            if (!label) return;
+            if (titlesMatch(label, parts.lastHeading) || titlesMatch(label, parts.lastSubheading)) return;
+            parts.lastSubheading = label;
+            parts.html += '<h3 class="jira-s" style="font-size:14px;font-weight:bold;margin:12px 0 4px;">' + escapeHtml(label) + '</h3>';
+            parts.text += label + '\n';
+        }
+
+        function appendBody(parts, value) {
+            const text = String(value || '').trim();
+            parts.html += '<p class="jira-body" style="font-size:12px;margin:0 0 10px;white-space:pre-wrap;">' + escapeHtml(text).replace(/\n/g, '<br>') + '</p>';
+            parts.text += text + '\n\n';
+        }
+
+        function selectPreview(el) {
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
         }
 
         function compileText() {
@@ -1107,11 +1221,13 @@
                 return;
             }
 
-            let compiledText = '*Jira board:* ' + board.name + '\n';
+            const parts = { html: '', text: '', lastHeading: '', lastSubheading: '' };
+            appendSubheading(parts, 'Jira board');
+            appendBody(parts, board.name);
             if (board.issueType) {
-                compiledText += '*Issue Type:* ' + board.issueType + '\n';
+                appendSubheading(parts, 'Issue Type');
+                appendBody(parts, board.issueType);
             }
-            compiledText += '\n';
 
             board.fields.forEach(function (field) {
                 if (field.skipCompile) return;
@@ -1123,8 +1239,12 @@
                     }
                 }
 
-                if (field.compileSection) {
-                    compiledText += field.compileSection;
+                const heading = headingFromField(field);
+                if (heading && (field.compileSection || field.section)) {
+                    appendHeading(parts, heading);
+                }
+                if (field.compileIntro) {
+                    appendBody(parts, field.compileIntro);
                 }
 
                 const label = (field.compileLabel || field.label || '').trim();
@@ -1132,17 +1252,19 @@
                 if (field.type === 'checkbox') {
                     const inputElement = document.getElementById(field.id);
                     if (!inputElement) return;
-                    compiledText += (inputElement.checked ? '☑ ' : '☐ ') + label + '\n\n';
+                    appendBody(parts, (inputElement.checked ? '☑ ' : '☐ ') + label);
                     return;
                 }
 
                 if (field.type === 'checkboxes') {
-                    compiledText += '*' + label + '*\n';
-                    (field.options || []).forEach(function (optionValue) {
+                    if (!titlesMatch(label, heading)) {
+                        appendSubheading(parts, label);
+                    }
+                    const lines = (field.options || []).map(function (optionValue) {
                         const checked = getCheckboxGroupValues(field.id).indexOf(optionValue) !== -1;
-                        compiledText += (checked ? '☑ ' : '☐ ') + optionValue + '\n';
+                        return (checked ? '☑ ' : '☐ ') + optionValue;
                     });
-                    compiledText += '\n';
+                    appendBody(parts, lines.join('\n'));
                     return;
                 }
 
@@ -1150,20 +1272,22 @@
                 if (!inputElement) return;
 
                 let value = inputElement.value.trim();
-                compiledText += '*' + label + '*\n';
-
                 if (field.id === 'officehours' && (value === 'Yes - Jira Advised' || value === 'Yes')) {
                     const ohNameInput = document.getElementById('ohName');
                     const ohNameValue = ohNameInput ? ohNameInput.value.trim() : '';
                     if (ohNameValue) value = value + ' (Auth by: ' + ohNameValue + ')';
                 }
 
-                compiledText += value + '\n\n';
+                if (!titlesMatch(label, heading)) {
+                    appendSubheading(parts, label);
+                }
+                appendBody(parts, value);
             });
 
-            const compiled = document.getElementById('compiledTextArea');
-            compiled.value = compiledText;
-            compiled.select();
+            document.getElementById('compiledTextArea').value = parts.text;
+            const preview = document.getElementById('compiledPreview');
+            preview.innerHTML = parts.html;
+            selectPreview(preview);
         }
 
         function resetInput() {
@@ -1188,6 +1312,7 @@
                 delete savedValues[field.id];
             });
             document.getElementById('compiledTextArea').value = '';
+            document.getElementById('compiledPreview').innerHTML = '';
             syncConditionals(board);
             syncEngSentence();
             checkConfirmationStatus();
