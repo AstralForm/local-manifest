@@ -5,51 +5,94 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rippling Jira Generator</title>
     <style>
+        :root {
+            --bg: #f4f5f7;
+            --card: #ffffff;
+            --ink: #172b4d;
+            --muted: #5e6c84;
+            --line: #dfe1e6;
+            --accent: #0052cc;
+            --accent-soft: #deebff;
+            --ok: #00875a;
+            --ok-hover: #006644;
+            --danger: #de350b;
+            --danger-hover: #bf2600;
+            --heading: 16px;
+            --sub: 14px;
+            --body: 12px;
+            --shadow: 0 1px 1px rgba(9, 30, 66, 0.13), 0 0 1px rgba(9, 30, 66, 0.13);
+            --shadow-lg: 0 8px 16px rgba(9, 30, 66, 0.12);
+            --radius: 10px;
+        }
+
+        * { box-sizing: border-box; }
+
         body {
-            font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
-            padding: 20px;
-            max-width: 960px;
-            color: #222;
-            font-size: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            margin: 0;
+            padding: 28px 20px 48px;
+            background: var(--bg);
+            color: var(--ink);
+            font-size: var(--body);
+            line-height: 1.45;
+        }
+
+        .app-shell {
+            max-width: 880px;
+            margin: 0 auto;
+        }
+
+        .hero {
+            margin-bottom: 18px;
         }
 
         .page-title {
-            font-size: 16px;
-            margin: 0 0 8px 0;
+            font-size: 22px;
+            font-weight: 700;
+            margin: 0 0 6px;
+            letter-spacing: -0.02em;
         }
 
         .page-subtitle {
-            color: #555;
-            margin-bottom: 20px;
-            line-height: 1.4;
-            font-size: 12px;
+            color: var(--muted);
+            margin: 0;
+            font-size: var(--body);
+            line-height: 1.5;
+        }
+
+        .board-picker,
+        #emptyState,
+        #formRoot,
+        #formActions,
+        #outputBlock {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
         }
 
         .board-picker {
-            background: #f4f7fb;
-            border: 1px solid #c5d4e8;
-            border-radius: 8px;
-            padding: 16px 18px 18px;
-            margin-bottom: 10px;
+            padding: 18px 20px;
+            margin-bottom: 14px;
         }
 
-        .board-picker .gp-label {
-            margin-top: 0;
-        }
+        .board-picker .gp-label { margin-top: 0; }
 
         #boardSelect {
-            width: 420px;
-            max-width: 100%;
-            height: 38px;
-            font-size: 12px;
-            font-weight: bold;
+            width: min(420px, 100%);
+            height: 40px;
+            font-size: var(--body);
+            font-weight: 600;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 0 10px;
+            color: var(--ink);
         }
 
         .board-help {
             margin: 10px 0 0;
-            color: #334;
-            line-height: 1.45;
-            font-size: 12px;
+            color: var(--muted);
+            font-size: var(--body);
         }
 
         .tooltip {
@@ -57,27 +100,28 @@
             display: inline-block;
             margin-left: 5px;
             cursor: help;
-            color: #007bff;
+            color: var(--accent);
             font-weight: bold;
         }
 
         .tooltip .tooltiptext {
             visibility: hidden;
-            width: 400px;
-            background-color: #333;
+            width: 360px;
+            background-color: #172b4d;
             color: #fff;
             text-align: left;
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 10px;
             position: absolute;
             z-index: 10;
             bottom: 125%;
             left: 90%;
             opacity: 0;
-            transition: opacity 0.3s;
-            font-size: 0.9em;
+            transition: opacity 0.2s;
+            font-size: 12px;
             line-height: 1.4;
             white-space: normal;
+            font-weight: 400;
         }
 
         .tooltip:hover .tooltiptext {
@@ -86,251 +130,294 @@
         }
 
         .gp-label, .roe-label {
-            font-weight: bold;
-            color: #333;
+            font-weight: 700;
+            color: var(--ink);
             display: block;
-            margin-top: 15px;
+            margin-top: 14px;
             margin-bottom: 5px;
-            font-size: 14px;
+            font-size: var(--sub);
         }
 
         .hint {
             display: block;
-            color: #555;
+            color: var(--muted);
             font-style: italic;
             margin-bottom: 6px;
-            font-size: 12px;
+            font-size: var(--body);
         }
 
         .section-header {
-            font-size: 16px;
-            margin-top: 30px;
-            margin-bottom: 10px;
-            border-bottom: 2px solid #ccc;
-            padding-bottom: 5px;
-            color: #000;
-            font-weight: bold;
+            font-size: var(--heading);
+            margin: 28px 0 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--line);
+            color: var(--ink);
+            font-weight: 700;
         }
 
-        .gp-input, #compiledTextArea, #compiledPreview {
-            width: 95%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
+        #formRoot {
+            padding: 8px 22px 22px;
+            margin-bottom: 14px;
+        }
+
+        #formRoot:empty { display: none; }
+
+        .gp-input {
+            width: 100%;
+            max-width: 520px;
+            padding: 8px 10px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            font-size: var(--body);
+            color: var(--ink);
+            background: #fff;
+        }
+
+        textarea.gp-input {
+            max-width: 100%;
+            min-height: 88px;
             resize: vertical;
-            font-size: 12px;
         }
 
         .gp-input[type="text"], select.gp-input {
-            width: 400px;
             height: 38px;
         }
 
-        select.gp-input {
-            cursor: pointer;
-            background-color: #fff;
+        select.gp-input { cursor: pointer; }
+
+        .gp-input:focus, #boardSelect:focus, #copyTextArea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
         }
 
-        #compiledTextArea {
-            display: none;
-        }
-
-        #compiledPreview {
-            background-color: #e9ecef;
-            border: 2px dashed #007bff;
-            min-height: 280px;
-            font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
-            overflow: auto;
-        }
-
-        #compiledPreview h2.jira-h {
-            font-size: 16px;
-            font-weight: bold;
-            margin: 18px 0 6px;
-            line-height: 1.3;
-        }
-
-        #compiledPreview h2.jira-h:first-child {
-            margin-top: 0;
-        }
-
-        #compiledPreview h3.jira-s {
-            font-size: 14px;
-            font-weight: bold;
-            margin: 12px 0 4px;
-            line-height: 1.3;
-        }
-
-        #compiledPreview p.jira-body {
-            font-size: 12px;
-            margin: 0 0 10px;
-            line-height: 1.45;
-            white-space: pre-wrap;
+        #formActions {
+            padding: 16px 20px;
+            margin-bottom: 14px;
         }
 
         button {
-            padding: 10px 20px;
-            margin-right: 10px;
-            margin-top: 20px;
+            padding: 9px 16px;
+            margin-right: 8px;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.2s;
+            font-weight: 700;
+            font-size: var(--body);
+            transition: background-color 0.15s, transform 0.1s;
         }
 
-        .btn-create {
-            background-color: #28a745;
-            color: white;
-        }
+        .btn-create { background: var(--ok); color: #fff; }
+        .btn-create:hover:not(:disabled) { background: var(--ok-hover); }
+        .btn-create:disabled { background: #b3dfce; color: #f4f4f4; }
+        .btn-reset { background: var(--danger); color: #fff; }
+        .btn-reset:hover { background: var(--danger-hover); }
+        .btn-copy { background: var(--accent); color: #fff; }
+        .btn-copy:hover { background: #0747a6; }
 
-        .btn-create:hover:not(:disabled) {
-            background-color: #218838;
-        }
+        .gp-label a { margin-left: 4px; color: var(--accent); text-decoration: none; font-weight: 500; }
+        .gp-label a:hover { text-decoration: underline; }
 
-        .btn-create:disabled {
-            background-color: #9fd3aa;
-            color: #f4f4f4;
-        }
-
-        .btn-reset {
-            background-color: #dc3545;
-            color: white;
-        }
-
-        .btn-reset:hover {
-            background-color: #c82333;
-        }
-
-        .gp-label a {
-            margin-left: 4px;
-            color: #007bff;
-            text-decoration: none;
-            font-weight: normal;
-        }
-
-        .gp-label a:hover {
-            text-decoration: underline;
-        }
-
-        .disabled-wrapper {
-            position: relative;
-            display: inline-block;
-            cursor: not-allowed;
-        }
-
+        .disabled-wrapper { position: relative; display: inline-block; cursor: not-allowed; }
         .disabled-wrapper::after {
-            content: '⚠️ Please confirm all data is included.';
+            content: 'Please confirm all data is included.';
             position: absolute;
-            top: -40px;
+            top: -38px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 5px 10px;
-            background-color: #ffc107;
-            color: #333;
-            border: 1px solid #e0a800;
-            border-radius: 4px;
+            padding: 6px 10px;
+            background: #fffae6;
+            color: #172b4d;
+            border: 1px solid #ffe380;
+            border-radius: 6px;
             white-space: nowrap;
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
             pointer-events: none;
             z-index: 100;
-            font-size: 0.85em;
+            font-size: 12px;
+            font-weight: 600;
         }
+        .disabled-wrapper:hover::after { opacity: 1; visibility: visible; }
 
-        .disabled-wrapper:hover::after {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .sub-field {
-            margin-left: 20px;
-        }
-
-        .sub-field .gp-input[type="text"],
-        .sub-field textarea.gp-input,
-        .sub-field select.gp-input {
-            width: 380px;
-        }
+        .sub-field { margin-left: 20px; }
+        .sub-field .gp-input { max-width: 500px; }
 
         .amount-table {
-            width: 95%;
-            max-width: 720px;
+            width: 100%;
+            max-width: 640px;
             border-collapse: collapse;
             margin: 8px 0 12px;
-            font-size: 0.95em;
+            font-size: 12px;
         }
-
-        .amount-table th,
-        .amount-table td {
-            border: 1px solid #ccc;
+        .amount-table th, .amount-table td {
+            border: 1px solid var(--line);
             padding: 8px 10px;
             text-align: left;
         }
+        .amount-table th { background: #f4f5f7; }
 
-        .amount-table th {
-            background: #eef3f9;
-        }
-
-        .checkbox-row {
+        .checkbox-row, .checklist-item {
             display: flex;
             align-items: flex-start;
             gap: 8px;
-            margin-top: 8px;
+            margin: 8px 0;
         }
-
-        .checkbox-row input[type="checkbox"] {
-            margin-top: 4px;
-            width: 18px;
-            height: 18px;
-            flex-shrink: 0;
-        }
-
-        .checkbox-row .gp-label {
-            display: inline;
-            margin: 0;
-            font-weight: bold;
-        }
-
-        .checklist-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-            margin: 6px 0;
-        }
-
+        .checkbox-row input[type="checkbox"],
         .checklist-item input[type="checkbox"] {
             margin-top: 3px;
             width: 16px;
             height: 16px;
             flex-shrink: 0;
         }
-
-        .checklist-item span {
-            line-height: 1.35;
-        }
+        .checkbox-row .gp-label { display: inline; margin: 0; }
 
         #emptyState {
-            margin-top: 24px;
-            padding: 18px;
-            border: 1px dashed #9aa;
-            border-radius: 6px;
-            color: #555;
+            margin-top: 0;
+            padding: 22px;
+            color: var(--muted);
         }
 
-        #formActions, #outputBlock {
-            display: none;
+        #formActions, #outputBlock { display: none; }
+
+        #outputBlock {
+            padding: 0;
+            overflow: hidden;
         }
+
+        .output-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 18px 0;
+        }
+
+        .output-header .roe-label {
+            margin: 0;
+            font-size: var(--sub);
+        }
+
+        .output-hint {
+            color: var(--muted);
+            font-size: 12px;
+            margin: 6px 18px 0;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin: 14px 18px 0;
+            border-bottom: 2px solid var(--line);
+        }
+
+        .tab-btn {
+            background: transparent;
+            color: var(--muted);
+            border-radius: 0;
+            margin: 0;
+            padding: 10px 16px;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            font-weight: 700;
+        }
+
+        .tab-btn:hover { background: #f4f5f7; color: var(--ink); }
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            background: transparent;
+        }
+
+        .tab-panel { display: none; padding: 16px 18px 20px; }
+        .tab-panel.active { display: block; }
+
+        .ticket-card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 22px 24px 10px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .ticket-kicker {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .ticket-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0 0 6px;
+            color: var(--ink);
+        }
+
+        .ticket-meta {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 18px;
+        }
+
+        .ticket-card h2 {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 22px 0 8px;
+            color: var(--ink);
+        }
+
+        .ticket-card h2:first-of-type { margin-top: 8px; }
+
+        .ticket-card ul {
+            margin: 0 0 8px;
+            padding-left: 18px;
+        }
+
+        .ticket-card li {
+            font-size: 12px;
+            margin: 0 0 8px;
+            line-height: 1.5;
+            color: #253858;
+        }
+
+        .ticket-card li strong {
+            font-size: 12px;
+            color: var(--ink);
+        }
+
+        .ticket-empty {
+            color: var(--muted);
+            font-style: italic;
+            padding: 24px 8px;
+        }
+
+        #copyTextArea {
+            width: 100%;
+            min-height: 320px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            background: #fafbfc;
+            resize: vertical;
+        }
+
+        #compiledTextArea { display: none; }
     </style>
 </head>
 <body>
+    <div class="app-shell">
+    <div class="hero">
     <h1 class="page-title">Rippling Jira Generator</h1>
     <p class="page-subtitle">
-        Choose the Jira board / ticket type first. The intake fields and compiled Jira text switch to that board’s format.
-        Available formats: Rippling Standard, Global Payroll, BEXC Invoice Waiver, and BEXC Account Exemptions.
+        Choose a Jira board, fill the intake, then use the Preview tab to review the ticket before copying it into Jira.
     </p>
+    </div>
 
     <div class="board-picker">
         <label for="boardSelect" class="gp-label">Jira board / ticket type
@@ -353,13 +440,23 @@
     </div>
 
     <div id="outputBlock">
-        <br>
-        <label class="roe-label">
-            Jira Text — Command A (select all), Command C (copy), Command V (paste) into your Jira!<br>
-            <i>Do not Command Shift V (plain text paste) or formatting is lost.</i>
-        </label>
-        <div id="compiledPreview" contenteditable="true" aria-label="Jira Text"></div>
+        <div class="output-header">
+            <label class="roe-label">Generated Jira</label>
+            <button type="button" class="btn-copy" id="copyButton">Copy for Jira</button>
+        </div>
+        <p class="output-hint">Preview shows how the ticket will look. Copy for Jira uses formatted paste — do not use Shift+Command+V.</p>
+        <div class="tabs" role="tablist">
+            <button type="button" class="tab-btn active" data-tab="preview" id="tabPreview">Preview</button>
+            <button type="button" class="tab-btn" data-tab="copy" id="tabCopy">Copy text</button>
+        </div>
+        <div class="tab-panel active" id="panelPreview">
+            <div id="compiledPreview" class="ticket-card" aria-label="Jira preview"></div>
+        </div>
+        <div class="tab-panel" id="panelCopy">
+            <textarea id="copyTextArea" spellcheck="false" aria-label="Jira copy text"></textarea>
+        </div>
         <textarea id="compiledTextArea" rows="10" aria-hidden="true"></textarea>
+    </div>
     </div>
 
     <script>
@@ -386,8 +483,8 @@
 
             if (includeName) {
                 fields.push(text('companyName', 'a. Company name', {
-                    section: '2. Customer Information',
-                    compileSection: '2. Customer Information',
+                    section: '2. Account Details',
+                    compileSection: '2. Account Details',
                     tooltip: 'Legal or display name of the customer company.'
                 }));
                 fields.push(text('companyID', 'b. Company ID', { tooltip: 'The unique identifier for the company.' }));
@@ -411,8 +508,8 @@
                 }
             } else {
                 fields.push(text('companyID', 'a. Company ID', {
-                    section: '2. Customer Information',
-                    compileSection: '2. Customer Information',
+                    section: '2. Account Details',
+                    compileSection: '2. Account Details',
                     tooltip: 'The unique identifier for the company.'
                 }));
                 fields.push(text('country', 'b. Country', { tooltip: 'The country where the issue is occurring.' }));
@@ -466,9 +563,10 @@
 
         function bexcAccountFields(troubleshootingHint) {
             return [
-                text('companyID', 'Company ID', {
-                    section: 'Account and EE Details',
-                    compileSection: '\n**Account and EE Details:**\n',
+                text('companyID', 'CID', {
+                    section: '2. Account Details',
+                    compileSection: '2. Account Details',
+                    compileLabel: 'CID',
                     tooltip: 'The unique identifier for the company.'
                 }),
                 text('arr', 'ARR', { tooltip: 'Annual Recurring Revenue for the client.' }),
@@ -482,6 +580,9 @@
                     tooltip: 'Is this a PEO customer?'
                 }),
                 area('troubleshooting', 'Troubleshooting actions taken so far', {
+                    section: '3. Troubleshooting Actions Taken So Far',
+                    compileSection: '3. Troubleshooting Actions Taken So Far',
+                    compileLabel: 'Context',
                     hint: troubleshootingHint
                 })
             ];
@@ -497,33 +598,32 @@
                 fields: [
                     area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
                     area('whatIsHappening', 'What is happening', {
-                        section: 'What is happening',
-                        compileSection: '\n**What is happening:**\n',
+                        section: '1. Issue Description',
+                        compileSection: '1. Issue Description',
                         compileLabel: 'What is happening',
                         hint: 'Observable system (error messages, incorrect output, unexpected system behavior)',
                         placeholder: 'Example: Error toast “Unable to generate document” when opening the latest paystub.'
                     }),
-                    area('whenItHappens', 'When it happens', {
-                        section: 'When it happens',
-                        compileSection: '\n**When it happens:**\n',
-                        compileLabel: 'When it happens',
+                    area('whenItHappens', 'When the issue occurs', {
+                        compileLabel: 'When the issue occurs',
                         hint: 'Trigger conditions (what specific app/payroll run/employee is impacted and what actions are triggering the system behavior)',
                         placeholder: 'Example: UK Default Pay Schedule, Aug 2025 run, EE Jane Doe after clicking Download paystub.'
                     }),
-                    area('whatShouldHappen', 'What should happen', {
-                        section: 'What should happen',
-                        compileSection: '\n**What should happen:**\n',
-                        compileLabel: 'What should happen',
+                    area('whatShouldHappen', 'Expected outcome', {
+                        compileLabel: 'Expected outcome',
                         hint: 'Correct system behavior (what should be happening and how you are able to confirm this via demo account, playbooks, HC articles etc.)',
                         placeholder: 'Example: Paystub PDF should download. Confirmed on demo and in the Paystubs HC article.'
                     }),
-                    text('companyID', 'Company ID', {
-                        section: 'Account and EE Details',
-                        compileSection: '\n**Account and EE Details:**\n',
+                    text('companyID', 'CID', {
+                        section: '2. Account Details',
+                        compileSection: '2. Account Details',
+                        compileLabel: 'CID',
                         tooltip: 'The unique identifier for the company.'
                     }),
-                    text('country', 'Country the run belongs to'),
+                    text('accountName', 'Account Name', { compileLabel: 'Account Name' }),
                     text('arr', 'ARR', { tooltip: 'Annual Recurring Revenue for the client.' }),
+                    text('caseNumber', 'Case', { compileLabel: 'Case' }),
+                    text('country', 'Country the run belongs to'),
                     text('entityName', 'Entity Name'),
                     area('affectedPeople', 'Name & Role IDs of affected employee(s) / admin(s), if applicable', {
                         rows: 4,
@@ -540,11 +640,11 @@
                         id: 'troubleshootingIntro',
                         type: 'html',
                         skipCompile: true,
-                        section: 'Troubleshooting actions taken so far',
+                        section: '3. Troubleshooting Actions Taken So Far',
                         html: '<p class="hint">Outline the actions you have already taken to troubleshoot the issue during your pre check. Complete each applicable checkbox and the follow-up fields.</p>'
                     },
                     checkbox('tsLogrocket', 'LogRocket reviewed', {
-                        compileSection: '\n**Troubleshooting actions taken so far:**\n'
+                        compileSection: '3. Troubleshooting Actions Taken So Far'
                     }),
                     text('logrocketLink', 'LogRocket link attached with support screenshots', {
                         conditional: true,
@@ -629,8 +729,9 @@
                         'Confirm expected behavior',
                         'Data correction'
                     ], {
-                        section: 'Action required from Eng',
-                        compileSection: '\n**Action required from Eng:**\n',
+                        section: '4. Action Required from Engineering',
+                        compileSection: '4. Action Required from Engineering',
+                        compileLabel: 'Ask types',
                         hint: 'Select every ask that applies.'
                     }),
                     area('engExpectedOutcome', 'Expected outcome', {
@@ -652,16 +753,23 @@
                         isSubField: true,
                         skipCompile: true
                     }),
-                    area('productSpecificDetails', 'Product-Specific Issue Details', {
-                        section: 'Product-Specific Issue Details',
-                        compileSection: '\n**Product-Specific Issue Details:**\n',
-                        hint: 'Some products require additional information. Include them if this Jira is being created for that board. Review the product grid and add the extra ENG details here.',
-                        rows: 6,
-                        placeholder: 'Example: Product board: Spend\nAdditional ENG fields: card last 4, transaction ID, merchant'
+                    text('productArea', 'Product Area', {
+                        section: '5. Product-Specific Details',
+                        compileSection: '5. Product-Specific Details',
+                        compileLabel: 'Product Area',
+                        placeholder: 'Example: Billing / Churn Process / Failed Invoice Blocker Override'
+                    }),
+                    text('reasonCategory', 'Reason Category', {
+                        compileLabel: 'Reason Category',
+                        placeholder: 'Example: Suspended Churn (90+ Days Past Due)'
+                    }),
+                    area('productSpecificDetails', 'Additional product details', {
+                        hint: 'Some products require extra ENG fields. Add anything else from the product grid here.',
+                        rows: 4
                     }),
                     selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
                         defaultValue: 'No',
-                        compileLabel: 'Have you included all of requested information?'
+                        skipCompile: true
                     })
                 ]
             },
@@ -674,8 +782,8 @@
                 fields: [
                     area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
                     area('problemDescription', 'a. What is the problem?', {
-                        section: '1. Issue Description & Context',
-                        compileSection: '\n**1. Issue Description & Context**\n',
+                        section: '1. Issue Description',
+                        compileSection: '1. Issue Description',
                         hint: 'What broke? What was the outcome of the issue?',
                         placeholder: 'Example: 2 UK EEs had incorrect retro pay calculated in June & July 2025 payruns. Admin manually corrected amounts after system under-calculated retro pay. '
                     }),
@@ -712,7 +820,7 @@
                 ].concat(customerSection({ includeCompanyName: false })).concat([
                     selectField('officehours', 'a. Did you confirm in OH/Lead?', ['No', 'Yes - Jira Advised'], {
                         section: '3. Global Payroll Specific Details',
-                        compileSection: '\n**3. Global Payroll Specific Details**\n',
+                        compileSection: '3. Global Payroll Specific Details',
                         defaultValue: 'No',
                         tooltip: 'Did you confirm the necessity of a Jira with an Office Hour session or Team Lead?'
                     }),
@@ -749,7 +857,7 @@
                     }),
                     selectField('confirmation', 'd. Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
                         defaultValue: 'No',
-                        compileLabel: 'd. Have you included all of requested information?'
+                        skipCompile: true
                     })
                 ])
             },
@@ -762,16 +870,16 @@
                 fields: [
                     area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
                     area('whatIsHappening', 'What is happening', {
-                        section: 'What is happening',
-                        compileSection: '\n**What is happening:**\n',
+                        section: '1. Issue Description',
+                        compileSection: '1. Issue Description',
                         compileLabel: 'What is happening',
                         hint: 'Please clarify why we need to waive the invoices for the customer and what occurred that we need to waive these invoices.',
                         placeholder: 'Example: Customer was billed twice for the September platform fee after a contract correction. AM approved waiving the duplicate invoice.'
                     })
                 ].concat(bexcAccountFields('Share the steps taken so far and confirm whether you have received approval from the AM or the relevant team to waive the invoices. Attach the Slack thread confirmation or a screenshot of the AM\'s approval.')).concat([
                     text('waiverAmount', 'Waiver amount', {
-                        section: 'Waiver amount',
-                        compileSection: '\n**Waiver amount:**\n',
+                        section: '4. Waiver Details',
+                        compileSection: '4. Waiver Details',
                         hint: 'Please mention the amount that needs to be waived.',
                         placeholder: 'Example: $2,500'
                     }),
@@ -783,8 +891,7 @@
                         html: '<div class="html-block"><p class="hint">Required approvers are filled from the waiver amount using this matrix.</p><table class="amount-table"><thead><tr><th>Amount</th><th>Required Approvers</th></tr></thead><tbody><tr><td>Under $1,000</td><td>No approver needed</td></tr><tr><td>$1,000 – $5,000</td><td>Requester\'s Manager</td></tr><tr><td>$5,000 – $10,000</td><td>Requester\'s Manager + Director</td></tr><tr><td>$10,000 – $50,000</td><td>Requester\'s Manager + Director + VP</td></tr><tr><td>$50,000+</td><td>Requester\'s Manager + Director + VP + Vipin Sethi (Accounting)</td></tr></tbody></table></div>'
                     },
                     selectField('amountCategory', 'Amount Category', AMOUNT_CATEGORIES.map(function (band) { return band.label; }), {
-                        hideLabel: true,
-                        compileSection: 'Amount Category'
+                        hideLabel: true
                     }),
                     text('requiredApprovers', 'Required Approvers', {
                         defaultValue: '',
@@ -792,8 +899,8 @@
                         tooltip: 'Auto-filled from the waiver amount / amount category.'
                     }),
                     area('whyDebitedAndWaiving', 'Why were the charges initially debited, and why are we waiving them now?', {
-                        section: 'Action required',
-                        compileSection: 'Action required',
+                        section: '5. Action Required from Engineering',
+                        compileSection: '5. Action Required from Engineering',
                         compileIntro: 'This Jira is for reference.',
                         hint: 'This Jira is for reference. Explain why the charges were initially debited and why they are being waived now.'
                     }),
@@ -802,7 +909,7 @@
                     }),
                     selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
                         defaultValue: 'No',
-                        compileLabel: 'Have you included all of requested information?'
+                        skipCompile: true
                     })
                 ])
             },
@@ -816,23 +923,23 @@
                 fields: [
                     area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
                     area('whatIsHappening', 'What is happening', {
-                        section: 'What is happening',
-                        compileSection: '\n**What is happening:**\n',
+                        section: '1. Issue Description',
+                        compileSection: '1. Issue Description',
                         compileLabel: 'What is happening',
                         hint: 'Please clarify why we need to grant an exemption to the customer and explain the business justification for providing this exemption.',
                         placeholder: 'Example: Customer needs a 30-day exemption from the new spend-control rollout while finance finishes vendor mapping.'
                     })
                 ].concat(bexcAccountFields('Please share the steps that have been taken to resolve the issue.')).concat([
                     area('exemptionDuration', 'How long is the exemption needed for?', {
-                        section: 'Action required',
-                        compileSection: '\n**Action required:**\n',
+                        section: '4. Action Required from Engineering',
+                        compileSection: '4. Action Required from Engineering',
                         compileLabel: 'How long is the exemption needed for?',
                         hint: 'Please clarify how long the exemption is needed for.',
                         placeholder: 'Example: 30 days, through 10 Oct 2026'
                     }),
                     selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
                         defaultValue: 'No',
-                        compileLabel: 'Have you included all of requested information?'
+                        skipCompile: true
                     })
                 ])
             }
@@ -1109,6 +1216,7 @@
                             savedValues[field.id] = getCheckboxGroupValues(field.id);
                             syncConditionals(board);
                             syncEngSentence();
+                            refreshPreview();
                         });
                     });
                     return;
@@ -1122,12 +1230,14 @@
                     if (field.id === 'amountCategory') syncApproversFromCategory();
                     if (field.id === 'engExpectedOutcome') syncEngSentence();
                     syncConditionals(board);
+                    refreshPreview();
                 };
                 input.addEventListener('input', handler);
                 input.addEventListener('change', handler);
             });
             syncWaiverCategory();
             syncEngSentence();
+            refreshPreview();
         }
 
         function renderBoard(boardId) {
@@ -1177,117 +1287,212 @@
             syncConditionals(board);
             checkConfirmationStatus();
             document.getElementById('compiledTextArea').value = '';
-            document.getElementById('compiledPreview').innerHTML = '';
+            refreshPreview();
+            showTab('preview');
         }
 
-        function appendHeading(parts, heading) {
-            heading = String(heading || '').replace(/:$/, '').trim();
-            if (!heading) return;
-            if (titlesMatch(heading, parts.lastHeading)) return;
-            parts.lastHeading = heading;
-            parts.html += '<h2 class="jira-h" style="font-size:16px;font-weight:bold;margin:18px 0 6px;">' + escapeHtml(heading) + '</h2>';
-            parts.text += heading + '\n\n';
+        function cleanLabel(label) {
+            return String(label || '')
+                .replace(/^[a-z]\.\s*/i, '')
+                .replace(/:$/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
         }
 
-        function appendSubheading(parts, label) {
-            label = String(label || '').replace(/:$/, '').trim();
-            if (!label) return;
-            if (titlesMatch(label, parts.lastHeading) || titlesMatch(label, parts.lastSubheading)) return;
-            parts.lastSubheading = label;
-            parts.html += '<h3 class="jira-s" style="font-size:14px;font-weight:bold;margin:12px 0 4px;">' + escapeHtml(label) + '</h3>';
-            parts.text += label + '\n';
+        function numberedHeading(title, count) {
+            title = String(title || '').replace(/:$/g, '').trim();
+            if (!title) return '';
+            if (/^\d+\.\s/.test(title)) return title;
+            return count + '. ' + title;
         }
 
-        function appendBody(parts, value) {
-            const text = String(value || '').trim();
-            parts.html += '<p class="jira-body" style="font-size:12px;margin:0 0 10px;white-space:pre-wrap;">' + escapeHtml(text).replace(/\n/g, '<br>') + '</p>';
-            parts.text += text + '\n\n';
+        function linkify(text) {
+            return escapeHtml(text).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
         }
 
-        function selectPreview(el) {
-            const range = document.createRange();
-            range.selectNodeContents(el);
-            const selection = window.getSelection();
-            selection.removeAllRanges();
-            selection.addRange(range);
-        }
+        function buildTicket(board) {
+            const sections = [];
+            let title = '';
+            let fieldType = '';
 
-        function compileText() {
-            const board = getBoard(currentBoardId);
-            if (!board) return;
-            const confirmationInput = document.getElementById('confirmation');
-            if (!confirmationInput || confirmationInput.value.trim() !== 'Yes') {
-                alert("Please confirm you have included all requested information by setting the confirmation field to 'Yes'.");
-                return;
+            function current() {
+                return sections[sections.length - 1];
             }
 
-            const parts = { html: '', text: '', lastHeading: '', lastSubheading: '' };
-            appendSubheading(parts, 'Jira board');
-            appendBody(parts, board.name);
-            if (board.issueType) {
-                appendSubheading(parts, 'Issue Type');
-                appendBody(parts, board.issueType);
+            function ensureSection(rawTitle) {
+                const heading = numberedHeading(rawTitle, sections.length + 1);
+                if (!heading) return;
+                if (current() && titlesMatch(current().title, heading)) return;
+                sections.push({ title: heading, intro: '', items: [] });
+            }
+
+            function addItem(label, value) {
+                const text = String(value || '').trim();
+                if (!text && fieldType !== 'checkbox') return;
+                if (!current()) ensureSection('Details');
+                current().items.push({
+                    label: cleanLabel(label),
+                    value: text
+                });
             }
 
             board.fields.forEach(function (field) {
+                fieldType = field.type;
                 if (field.skipCompile) return;
-
                 if (field.conditional) {
                     const dependencyElement = document.getElementById(field.dependencyId);
-                    if (!dependencyMatches(dependencyElement, field.dependencyValue)) {
-                        return;
-                    }
+                    if (!dependencyMatches(dependencyElement, field.dependencyValue)) return;
+                }
+
+                if (field.id === 'jiraTitle') {
+                    const inputElement = document.getElementById(field.id);
+                    title = inputElement ? inputElement.value.trim() : '';
+                    return;
                 }
 
                 const heading = headingFromField(field);
-                if (heading && (field.compileSection || field.section)) {
-                    appendHeading(parts, heading);
+                if (heading && (field.compileSection || field.section) && field.type !== 'html') {
+                    ensureSection(heading);
                 }
                 if (field.compileIntro) {
-                    appendBody(parts, field.compileIntro);
+                    addItem('Note', field.compileIntro);
                 }
 
-                const label = (field.compileLabel || field.label || '').trim();
+                const label = field.compileLabel || field.label || '';
 
                 if (field.type === 'checkbox') {
                     const inputElement = document.getElementById(field.id);
-                    if (!inputElement) return;
-                    appendBody(parts, (inputElement.checked ? '☑ ' : '☐ ') + label);
+                    if (!inputElement || !inputElement.checked) return;
+                    addItem(label, 'Yes');
                     return;
                 }
 
                 if (field.type === 'checkboxes') {
-                    if (!titlesMatch(label, heading)) {
-                        appendSubheading(parts, label);
-                    }
-                    const lines = (field.options || []).map(function (optionValue) {
-                        const checked = getCheckboxGroupValues(field.id).indexOf(optionValue) !== -1;
-                        return (checked ? '☑ ' : '☐ ') + optionValue;
-                    });
-                    appendBody(parts, lines.join('\n'));
+                    const selected = getCheckboxGroupValues(field.id);
+                    if (!selected.length) return;
+                    addItem(label, selected.join(', '));
                     return;
                 }
 
                 const inputElement = document.getElementById(field.id);
                 if (!inputElement) return;
-
                 let value = inputElement.value.trim();
                 if (field.id === 'officehours' && (value === 'Yes - Jira Advised' || value === 'Yes')) {
                     const ohNameInput = document.getElementById('ohName');
                     const ohNameValue = ohNameInput ? ohNameInput.value.trim() : '';
                     if (ohNameValue) value = value + ' (Auth by: ' + ohNameValue + ')';
                 }
-
-                if (!titlesMatch(label, heading)) {
-                    appendSubheading(parts, label);
-                }
-                appendBody(parts, value);
+                if (!value) return;
+                if (value === 'n/a') return;
+                if ((field.id === 'officehours' || field.id === 'workaround' || field.id === 'escalated' || field.id === 'peoCustomer') && value === 'No') return;
+                if (value.indexOf('[action]') !== -1 || value.indexOf('[expected outcome]') !== -1) return;
+                addItem(label, value);
             });
 
-            document.getElementById('compiledTextArea').value = parts.text;
+            const filled = sections.filter(function (section) { return section.items.length; });
+            filled.forEach(function (section, index) {
+                const base = section.title.replace(/^\d+\.\s*/, '');
+                section.title = (index + 1) + '. ' + base;
+            });
+
+            return { title: title, boardName: board.name, issueType: board.issueType || '', sections: filled };
+        }
+
+        function renderTicketHtml(ticket) {
+            if (!ticket) return '<p class="ticket-empty">Fill in the form to see a live preview.</p>';
+            let html = '<div class="ticket-kicker">Description</div>';
+            html += '<h1 class="ticket-title">' + escapeHtml(ticket.title || 'Untitled Jira') + '</h1>';
+            html += '<p class="ticket-meta">' + escapeHtml(ticket.boardName) + (ticket.issueType ? ' · ' + escapeHtml(ticket.issueType) : '') + '</p>';
+            ticket.sections.forEach(function (section) {
+                if (!section.items.length && !section.intro) return;
+                html += '<h2>' + escapeHtml(section.title) + '</h2><ul>';
+                section.items.forEach(function (item) {
+                    html += '<li><strong>' + escapeHtml(item.label) + ':</strong> ' + linkify(item.value).replace(/\n/g, '<br>') + '</li>';
+                });
+                html += '</ul>';
+            });
+            return html;
+        }
+
+        function renderTicketMarkdown(ticket) {
+            if (!ticket) return '';
+            let text = '';
+            if (ticket.title) text += '**' + ticket.title + '**\n\n';
+            ticket.sections.forEach(function (section) {
+                if (!section.items.length) return;
+                text += '##' + ' ' + section.title + '\n\n';
+                section.items.forEach(function (item) {
+                    const value = item.value.replace(/\n/g, '\n  ');
+                    text += '- **' + item.label + ':** ' + value + '\n';
+                });
+                text += '\n';
+            });
+            return text.trim() + '\n';
+        }
+
+        function refreshPreview() {
+            const board = getBoard(currentBoardId);
             const preview = document.getElementById('compiledPreview');
-            preview.innerHTML = parts.html;
-            selectPreview(preview);
+            const copyArea = document.getElementById('copyTextArea');
+            const hidden = document.getElementById('compiledTextArea');
+            if (!preview) return;
+            if (!board) {
+                preview.innerHTML = '<p class="ticket-empty">Select a board to preview the Jira.</p>';
+                if (copyArea) copyArea.value = '';
+                if (hidden) hidden.value = '';
+                return;
+            }
+            const ticket = buildTicket(board);
+            preview.innerHTML = renderTicketHtml(ticket);
+            const markdown = renderTicketMarkdown(ticket);
+            if (copyArea) copyArea.value = markdown;
+            if (hidden) hidden.value = markdown;
+        }
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(function (btn) {
+                btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
+            });
+            document.querySelectorAll('.tab-panel').forEach(function (panel) {
+                panel.classList.toggle('active', panel.id === 'panel' + tabId.charAt(0).toUpperCase() + tabId.slice(1));
+            });
+        }
+
+        function compileText() {
+            const confirmationInput = document.getElementById('confirmation');
+            if (!confirmationInput || confirmationInput.value.trim() !== 'Yes') {
+                alert("Please confirm you have included all requested information by setting the confirmation field to 'Yes'.");
+                return;
+            }
+            refreshPreview();
+            showTab('preview');
+        }
+
+        async function copyForJira() {
+            refreshPreview();
+            const preview = document.getElementById('compiledPreview');
+            const markdown = document.getElementById('copyTextArea').value;
+            try {
+                if (navigator.clipboard && window.ClipboardItem) {
+                    const html = preview.innerHTML;
+                    await navigator.clipboard.write([
+                        new ClipboardItem({
+                            'text/html': new Blob([html], { type: 'text/html' }),
+                            'text/plain': new Blob([markdown], { type: 'text/plain' })
+                        })
+                    ]);
+                } else {
+                    document.getElementById('copyTextArea').select();
+                    document.execCommand('copy');
+                }
+                const btn = document.getElementById('copyButton');
+                const original = btn.textContent;
+                btn.textContent = 'Copied';
+                setTimeout(function () { btn.textContent = original; }, 1400);
+            } catch (err) {
+                showTab('copy');
+                document.getElementById('copyTextArea').select();
+            }
         }
 
         function resetInput() {
@@ -1312,7 +1517,8 @@
                 delete savedValues[field.id];
             });
             document.getElementById('compiledTextArea').value = '';
-            document.getElementById('compiledPreview').innerHTML = '';
+            refreshPreview();
+            showTab('preview');
             syncConditionals(board);
             syncEngSentence();
             checkConfirmationStatus();
@@ -1354,6 +1560,12 @@
 
         document.getElementById('createButton').addEventListener('click', compileText);
         document.getElementById('resetButton').addEventListener('click', resetInput);
+        document.getElementById('copyButton').addEventListener('click', copyForJira);
+        document.querySelectorAll('.tab-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                showTab(btn.getAttribute('data-tab'));
+            });
+        });
         initBoardSelect();
     </script>
 </body>
