@@ -224,12 +224,10 @@ json_escape() {
 
 build_slack_payload() {
     local msg="$1"
-    # Prefer python3 on macOS for correct Unicode + JSON encoding
-    if command -v python3 >/dev/null 2>&1; then
-        SLACK_TEXT="$msg" python3 -c 'import json,os; print(json.dumps({"text": os.environ["SLACK_TEXT"]}, ensure_ascii=False))'
-    else
-        printf '{"text":"%s"}' "$(json_escape "$msg")"
-    fi
+    # Bash-only JSON (do NOT call python3 — macOS /usr/bin/python3 is often an
+    # Xcode CLT stub and fails with "No developer tools were found" /
+    # "Can't install the software because it is not currently available").
+    printf '{"text":"%s"}' "$(json_escape "$msg")"
 }
 
 notify_slack() {
@@ -382,7 +380,7 @@ echo -e "${CYAN}==========================================${NC}"
 - One Slack message only — after downloads complete — including those four fields + counts
 - Slack message must use plain-text Unicode layout (no mrkdwn asterisks / `:emoji:` shortcodes)
 - Do not include Next step or @acc-ops-seniors in the Slack message
-- Slack JSON must be built with macOS-safe encoding (python3 `json.dumps` preferred; bash `json_escape` fallback — never use `sed` for JSON escaping)
+- Slack JSON must be built with bash-only `json_escape` (never `python3`, never `sed`) so Macs without Xcode CLT still post to Slack
 - Warn in Slack when Failed > 0
 - Script header must include Created by: Arham Dharewa
 - No Slack posts at start or per file

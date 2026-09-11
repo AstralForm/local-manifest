@@ -39,11 +39,8 @@ json_escape() {
 
 build_slack_payload() {
     local msg="$1"
-    if command -v python3 >/dev/null 2>&1; then
-        SLACK_TEXT="$msg" python3 -c 'import json,os; print(json.dumps({"text": os.environ["SLACK_TEXT"]}, ensure_ascii=False))'
-    else
-        printf '{"text":"%s"}' "$(json_escape "$msg")"
-    fi
+    # Bash-only — avoid macOS python3 Xcode stub
+    printf '{"text":"%s"}' "$(json_escape "$msg")"
 }
 
 notify_slack() {
