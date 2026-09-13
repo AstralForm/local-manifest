@@ -133,8 +133,18 @@ After downloads finish (counters final), POST **exactly one** request to the Sla
 
 ### `Rest_of_Details` format (Unicode plain text)
 
+Include run identity + results so Slack still looks correct even if the workflow message step only inserts `Rest_of_Details`:
+
 ```text
 AO Bulk Export - Workflow Triggered ✅
+
+Run details:
+- Case: <Case>
+- CompanyName: <CompanyName>
+- EntityName: <EntityName>
+- CID: <CID>
+- User_mail: <User_mail>
+- UserID: <UserID>
 
 Download results:
 - Successful: <n>
@@ -142,10 +152,6 @@ Download results:
 - Failed: <n>
 - Files attempted: <TOTAL_FILES>
 - Download folder: <EntityName>
-
-Requester:
-- User_mail: <User_mail>
-- UserID: <UserID>
 ```
 
 If `Failed` > 0, use ⚠️ in the first line and append:
@@ -153,6 +159,40 @@ If `Failed` > 0, use ⚠️ in the first line and append:
 ```text
 Action needed: one or more downloads failed — re-check before upload.
 ```
+
+### Slack Workflow Builder message (required fix)
+
+The channel message in the screenshot is wrong because Workflow Builder still has a hardcoded **Next step** block with:
+
+- `#Important Note: Please make sure to submit JIRA using button`
+- **JIRA** button
+
+That text is **not** from the Bash script. Edit the workflow **Send a message** step to:
+
+1. **Delete** the Important Note / “submit JIRA using button” line  
+2. **Delete** the red **JIRA** button  
+3. Insert webhook variables so the message shows run data  
+4. Keep review buttons only if still needed (`Seniors Review`, `Manager Review`)  
+5. Add a separate workflow step: **Create a Jira issue** in `AOPS` (automatic — no button)
+
+**Recommended message body to paste into Workflow Builder:**
+
+```text
+AO Bulk Export — review requested
+
+Case: {{Case}}
+Company: {{CompanyName}}
+Entity: {{EntityName}}
+CID: {{CID}}
+Requester email: {{User_mail}}
+Requester Slack ID: {{UserID}}
+
+{{Rest_of_Details}}
+
+@acc-ops-seniors please review. If ARR is under 250K, tag @accountops-managers for further review.
+```
+
+(Use Workflow Builder’s **Insert a variable** control for each `{{...}}` field — do not type braces by hand if the UI provides inserts.)
 
 ### JSON encoding
 
@@ -371,16 +411,20 @@ fi
 Rest_of_Details=$(cat <<EOF
 ${TITLE_LINE}
 
+Run details:
+- Case: ${Case}
+- CompanyName: ${CompanyName}
+- EntityName: ${EntityName}
+- CID: ${CID}
+- User_mail: ${User_mail}
+- UserID: ${UserID}
+
 Download results:
 - Successful: ${SUCCESS}
 - Skipped: ${SKIPPED}
 - Failed: ${FAILED}
 - Files attempted: ${TOTAL_FILES}
 - Download folder: ${EntityName}
-
-Requester:
-- User_mail: ${User_mail}
-- UserID: ${UserID}
 ${ACTION_LINE:+
 ${ACTION_LINE}}
 EOF

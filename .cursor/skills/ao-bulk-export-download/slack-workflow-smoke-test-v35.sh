@@ -61,16 +61,20 @@ while [ -z "${CID:-}" ]; do read -r -p "CID: " CID; done
 Rest_of_Details=$(cat <<EOF
 AO Bulk Export - Workflow Triggered ✅
 
+Run details:
+- Case: ${Case}
+- CompanyName: ${CompanyName}
+- EntityName: ${EntityName}
+- CID: ${CID}
+- User_mail: ${User_mail}
+- UserID: ${UserID}
+
 Download results:
 - Successful: ${SUCCESS}
 - Skipped: ${SKIPPED}
 - Failed: ${FAILED}
 - Files attempted: ${TOTAL_FILES}
 - Download folder: ${EntityName}
-
-Requester:
-- User_mail: ${User_mail}
-- UserID: ${UserID}
 EOF
 )
 
