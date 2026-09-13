@@ -58,8 +58,16 @@ while [ -z "${User_mail:-}" ]; do read -r -p "User_mail: " User_mail; done
 while [ -z "${UserID:-}" ]; do read -r -p "UserID: " UserID; done
 while [ -z "${CID:-}" ]; do read -r -p "CID: " CID; done
 
+if [ "$FAILED" -gt 0 ]; then
+    TITLE_LINE='AO Bulk Export - Workflow Triggered ⚠️'
+    ACTION_LINE='⚠️ Action needed: one or more downloads failed — re-check before upload.'
+else
+    TITLE_LINE='AO Bulk Export - Workflow Triggered ✅'
+    ACTION_LINE=''
+fi
+
 Rest_of_Details=$(cat <<EOF
-AO Bulk Export - Workflow Triggered ✅
+${TITLE_LINE}
 
 Run details:
 - Case: ${Case}
@@ -77,6 +85,8 @@ Run details:
 🔴 Failed:           ${FAILED}
 📁 Files attempted:  ${TOTAL_FILES}
 📂 Download folder:  ${EntityName}
+${ACTION_LINE:+
+${ACTION_LINE}}
 EOF
 )
 
