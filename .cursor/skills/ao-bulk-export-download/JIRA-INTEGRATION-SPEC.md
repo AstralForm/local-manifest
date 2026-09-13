@@ -1,170 +1,106 @@
-# AO Bulk Export → Jira Integration Spec (V3.4)
+# AO Bulk Export → Slack Webhook → Jira AOPS (V3.5)
 
-Implementation lives **inside the generated Bash download script** (not a separate Slack→Jira button).
+## Architecture
 
-## Goal
-
-After AO Bulk Export downloads finish, the script automatically:
-
-1. Creates a Jira issue in project **`AOPS`**
-2. Posts one Slack completion message that includes the Jira key/link
-
-No Jira UI button. No manual “Create issue” click.
-
-## Slack webhook input mapping (from script prompts)
-
-| Script prompt | Slack / workflow field | Used for |
-|---|---|---|
-| User name | `UserName` | **Requester** in Jira description (not API auth) |
-| Case ID | `CaseID` | Jira summary + description |
-| Company name | `CompanyName` | Jira summary + description |
-| Entity name | `EntityName` | Jira summary + description + download folder |
-| Successful / Skipped / Failed / Total | results | Jira description + Slack message |
-| Jira key / URL | after create | Slack Jira section |
-
-## Jira project configuration
-
-| Setting | Value |
-|---|---|
-| Project key | `AOPS` |
-| Issue type | `Task` (override: `JIRA_ISSUE_TYPE`) |
-| Labels | `ao-bulk-export`, `review-request` |
-| Base URL | `https://rippling.atlassian.net` (override: `JIRA_BASE_URL`) |
-
-## Jira authentication
-
-| Item | Value |
-|---|---|
-| Auth email | `adharewa@rippling.com` |
-| Auth secret | Atlassian API token in **`JIRA_API_TOKEN`** env var |
-| Auth method | HTTP Basic via `curl -u email:token` |
-
-**Rules**
-
-- Use `adharewa@rippling.com` **only** for Jira API authentication
-- Use Slack / prompted **User name** as requester information inside the issue
-- Never hardcode, commit, or paste the API token into the skill or generated script
-
-### Operator setup (macOS)
-
-```bash
-export JIRA_API_TOKEN='your_atlassian_api_token'
-# optional overrides:
-# export JIRA_BASE_URL='https://rippling.atlassian.net'
-# export JIRA_ISSUE_TYPE='Task'
-# export SLACK_WEBHOOK_URL='https://hooks.slack.com/triggers/...'
+```text
+Bash download script
+    → POST Slack workflow webhook (7 variables)
+        → Slack Workflow
+            → Channel notification / review request
+            → Create Jira issue in project AOPS
 ```
 
-Create a token: https://id.atlassian.com/manage-profile/security/api-tokens
+No Jira button. No Jira REST call inside the Bash script (avoids duplicate tickets).
 
-## Jira REST API
+## Slack webhook variable schema (exact)
 
-```http
-POST {JIRA_BASE_URL}/rest/api/2/issue
-Authorization: Basic (adharewa@rippling.com:JIRA_API_TOKEN)
-Content-Type: application/json
-Accept: application/json
-```
+From Workflow Builder **From a webhook**:
 
-### Payload
+| Variable | Source in script |
+|---|---|
+| `Case` | Prompt |
+| `EntityName` | Prompt (default from dump); download folder |
+| `CompanyName` | Prompt |
+| `User_mail` | Prompt (requester email for Jira) |
+| `UserID` | Prompt (Slack member ID, e.g. `U123456789`) |
+| `Rest_of_Details` | Auto-built after downloads |
+| `CID` | Prompt |
+
+### Example HTTP body
 
 ```json
 {
-  "fields": {
-    "project": { "key": "AOPS" },
-    "summary": "AO Bulk Export Review — <Company> / <Entity> (<Case ID>)",
-    "issuetype": { "name": "Task" },
-    "labels": ["ao-bulk-export", "review-request"],
-    "description": "<plain text — see format below>"
-  }
+  "Case": "CASE-12345",
+  "EntityName": "Acme Corporation",
+  "CompanyName": "Acme Corp",
+  "User_mail": "ada@rippling.com",
+  "UserID": "U123456789",
+  "Rest_of_Details": "AO Bulk Export - Workflow Triggered ✅\n\nDownload results:\n- Successful: 10\n...",
+  "CID": "CID-001"
 }
 ```
 
-### Description format
+Content-Type: `application/json`
 
-```text
-Automatic review request from AO Bulk Export download script.
-
-Requester (Slack UserName): <User name>
-Case ID: <Case ID>
-Company: <Company name>
-Entity: <Entity name>
-
-Download results:
-- Successful: <n>
-- Skipped: <n>
-- Failed: <n>
-- Files attempted: <TOTAL_FILES>
-- Download folder: <Entity folder>
-
-Note: Jira API authenticated as adharewa@rippling.com. Requester is the Slack UserName above.
-```
-
-### Success response
-
-HTTP `201` (or `200`) with JSON containing `"key":"AOPS-123"`.
-
-Browse URL: `{JIRA_BASE_URL}/browse/AOPS-123`
-
-## cURL test commands
-
-### 1) Verify auth + project access
-
-```bash
-curl -sS -u "adharewa@rippling.com:$JIRA_API_TOKEN" \
-  -H 'Accept: application/json' \
-  "$JIRA_BASE_URL/rest/api/2/project/AOPS"
-```
-
-### 2) Create a test issue
-
-```bash
-curl -sS -u "adharewa@rippling.com:$JIRA_API_TOKEN" \
-  -X POST \
-  -H 'Content-Type: application/json' \
-  -H 'Accept: application/json' \
-  --data '{
-    "fields": {
-      "project": { "key": "AOPS" },
-      "summary": "AO Bulk Export Review — Test Co / Test Entity (CASE-000)",
-      "issuetype": { "name": "Task" },
-      "labels": ["ao-bulk-export", "review-request"],
-      "description": "Requester (Slack UserName): Ada Lovelace\nCase ID: CASE-000\nCompany: Test Co\nEntity: Test Entity"
-    }
-  }' \
-  "$JIRA_BASE_URL/rest/api/2/issue"
-```
-
-## Slack confirmation message
-
-After Jira attempt, post one Slack webhook message (`{"text":"..."}`) including:
-
-- Run details (User, Case ID, Company, Entity)
-- Results (Successful / Skipped / Failed / Files attempted / folder)
-- Jira section (Issue key + browse link, or failure/skipped status)
-
-Default webhook:
+Default webhook URL (override with `SLACK_WEBHOOK_URL`):
 
 ```text
 https://hooks.slack.com/triggers/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
 ```
 
+## Recommended Slack → Jira field mapping (workflow)
+
+Configure the workflow’s **Create Jira issue** step like this:
+
+| Jira field | Webhook variable |
+|---|---|
+| Project | `AOPS` (fixed) |
+| Issue type | Task (or your AOPS default) |
+| Summary | `AO Bulk Export Review — {{CompanyName}} / {{EntityName}} ({{Case}})` |
+| Description | Include `User_mail`, `UserID`, `Case`, `CID`, `CompanyName`, `EntityName`, and `Rest_of_Details` |
+| Requester / reporter context | Prefer `User_mail` / `UserID` — **not** the service account |
+
+### Jira API auth inside the Slack workflow only
+
+| Setting | Value |
+|---|---|
+| Auth email | `adharewa@rippling.com` |
+| Auth secret | Atlassian API token stored in the workflow / Slack connector |
+| Rule | Service account for API auth only; requester = `User_mail` / `UserID` |
+
+## cURL test (matches Workflow Builder)
+
+```bash
+curl -X POST \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "Case": "CASE-12345",
+    "EntityName": "Acme Corporation",
+    "CompanyName": "Acme Corp",
+    "User_mail": "ada@rippling.com",
+    "UserID": "U123456789",
+    "Rest_of_Details": "AO Bulk Export - Workflow Triggered ✅\n\nDownload results:\n- Successful: 1\n- Skipped: 0\n- Failed: 0",
+    "CID": "CID-001"
+  }' \
+  'https://hooks.slack.com/triggers/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'
+```
+
+Expect HTTP `200` / `{"ok":true}` and a workflow run.
+
 ## Error handling
 
 | Condition | Behavior |
 |---|---|
-| Missing `JIRA_API_TOKEN` | Warn, skip Jira, still Slack |
-| Jira HTTP non-2xx | Print body, mark failed, still Slack |
-| Slack HTTP non-200 | Print code/body, do not abort |
-| Download failures | Continue remaining files; warn in Slack |
+| Slack HTTP non-200 | Print code/body; downloads already finished |
+| Missing prompt values | Re-prompt until non-empty |
+| Download failures | Continue; reflect counts in `Rest_of_Details` |
 
 ## Acceptance criteria
 
-- [ ] Generated script prompts for User / Case / Company / Entity
-- [ ] Downloads complete with success/skip/fail counters
-- [ ] Script creates one `AOPS` Task without any Jira button
-- [ ] Auth uses `adharewa@rippling.com` + env token only
-- [ ] Issue description requester = prompted User name (Slack UserName)
-- [ ] Slack message includes Jira key/link when create succeeds
-- [ ] Missing token or Jira/Slack errors do not wipe download results
-- [ ] API token never appears in skill source or generated script body
+- [ ] Script prompts for Case, EntityName, CompanyName, User_mail, UserID, CID
+- [ ] Script POSTs JSON with those exact keys + `Rest_of_Details`
+- [ ] Content-Type is `application/json`
+- [ ] Payload is **not** `{"text":"..."}`
+- [ ] Slack workflow receives variables and can create AOPS issue
+- [ ] Jira auth in workflow uses `adharewa@rippling.com`; requester comes from `User_mail`/`UserID`
+- [ ] No duplicate Jira create from the Bash script

@@ -3,21 +3,21 @@ name: ao-bulk-export-download
 description: >-
   Generate a macOS-ready Bash download script from Rippling Bulk Export (or similar)
   raw text dumps containing an entity name, document labels (PAYSTUB, HUB, PRELIM_W2, W2),
-  download URLs, or "No links found". At run time the script asks for user name, case id,
-  company name, and entity name; after downloads it creates a Jira issue in project AOPS
-  (auth: adharewa@rippling.com + API token) using Slack UserName as requester, then posts
-  one Slack completion message. Use whenever the user pastes such export text or asks for
-  AO bulk export download script generation (V3.4).
+  download URLs, or "No links found". At run time the script asks for Case, EntityName,
+  CompanyName, User_mail, UserID, and CID; after downloads it POSTs one Slack workflow
+  webhook using that exact variable schema so the workflow can create a Jira AOPS issue
+  (no Jira button). Use whenever the user pastes such export text or asks for AO bulk
+  export download script generation (V3.5).
 ---
 
-# AO — Bulk Export Download Script Generator V3.4
+# AO — Bulk Export Download Script Generator V3.5
 
 ## Initialization
 
 When this skill loads and no dump has been pasted yet, reply only:
 
 ```text
-Ready. Please paste your raw text dump. I'll generate a downloadable Bash script named after the entity (for example, Acme Corporation.sh) with valid download commands, interactive prompts (user / case / company / entity), automatic Jira issue creation in AOPS, one Slack completion message, and the macOS run commands.
+Ready. Please paste your raw text dump. I'll generate a downloadable Bash script named after the entity (for example, Acme Corporation.sh) with valid download commands, interactive prompts matching the Slack webhook variables (Case / EntityName / CompanyName / User_mail / UserID / CID), one Slack workflow trigger after downloads, and the macOS run commands.
 ```
 
 ## When to use
@@ -27,7 +27,7 @@ Use when the user pastes admin export text that includes:
 - Document labels (e.g. `PAYSTUB`, `HUB`, `PRELIM_W2`, `W2`, or similar)
 - A download URL or `No links found` after each label
 
-Goal: one Bash script that downloads every available document, creates a **Jira review issue in `AOPS` automatically** (no Jira button), and posts **one** Slack completion message.
+Goal: one Bash script that downloads every available document, then fires the **Slack workflow webhook** with the exact variable schema so seniors/managers get a review request and the workflow can create a **Jira `AOPS` issue automatically** (no Jira button in the script).
 
 ## Parse rules
 
@@ -41,7 +41,7 @@ Goal: one Bash script that downloads every available document, creates a **Jira 
    - pure UI chrome (`Select an entity`, buttons, empty lines)
 3. If that fails, use the first non-empty non-chrome line near the top of the dump.
 4. If still unknown, ask once for the entity name. Do not invent one.
-5. Use the extracted entity for the **script filename** and as the **default** for the interactive Entity name prompt / download folder.
+5. Use the extracted entity for the **script filename** and as the **default** for the interactive `EntityName` prompt / download folder.
 
 ### Document entries
 
@@ -82,159 +82,120 @@ If the entity contains invalid filename characters, sanitize **only the filename
 - Trim leading/trailing spaces and `_`
 - Keep the original entity string as `DEFAULT_ENTITY` inside the script
 
-## Interactive prompts (required)
+## Interactive prompts (required) — Slack webhook fields
 
-At the **start** of every generated script (before downloads), prompt for:
+At the **start** of every generated script (before downloads), prompt for these Slack workflow variables:
 
-1. User name ← this is **Slack `UserName` / requester** (stored in Jira description; **not** used as Jira API auth)
-2. Case ID
-3. Company name
-4. Entity name (default = extracted entity; Enter keeps default)
+| Prompt label | Variable / shell name | Notes |
+|---|---|---|
+| Case | `Case` | Case ID |
+| Entity name | `EntityName` | Default = extracted entity; also used as download folder |
+| Company name | `CompanyName` | |
+| User email | `User_mail` | Requester email for workflow / Jira |
+| Slack User ID | `UserID` | e.g. `U123456789` |
+| CID | `CID` | As used by AO / workflow |
 
 Re-prompt if any value is empty.
 
-Do **not** post to Slack or create Jira at start. Do **not** post per-file Slack updates.
+Do **not** call Slack at start. Do **not** post per-file Slack updates.
 
-## Jira issue creation (automatic — in script)
+`Rest_of_Details` is **not** prompted — the script builds it after downloads.
 
-After downloads finish (summary counters final), the script **must** create one Jira issue via REST API. No Jira UI button.
+## Slack workflow webhook (only completion trigger)
 
-### Configuration
+After downloads finish (counters final), POST **exactly one** request to the Slack workflow webhook.
 
-| Setting | Value |
-|---|---|
-| Project | `AOPS` |
-| Issue type | `Task` (override with `$JIRA_ISSUE_TYPE`) |
-| Auth email | `adharewa@rippling.com` (**API auth only**) |
-| API token | `$JIRA_API_TOKEN` env var (**required**; never hardcode) |
-| Base URL | `$JIRA_BASE_URL` (default `https://rippling.atlassian.net`) |
+### Webhook URL resolution
 
-### Security
+1. `$SLACK_WEBHOOK_URL` if set
+2. Else default:
+   `https://hooks.slack.com/triggers/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`
 
-- Never embed the API token in the skill, generated script, git, Slack, or chat
-- Operators set token once on their Mac:
+### Required Content-Type
 
-```bash
-export JIRA_API_TOKEN='your_atlassian_api_token'
-export JIRA_BASE_URL='https://rippling.atlassian.net'   # if different
+`application/json`
+
+### Exact JSON body (keys must match Workflow Builder)
+
+```json
+{
+  "Case": "<Case>",
+  "EntityName": "<EntityName>",
+  "CompanyName": "<CompanyName>",
+  "User_mail": "<User_mail>",
+  "UserID": "<UserID>",
+  "Rest_of_Details": "<auto-built summary>",
+  "CID": "<CID>"
+}
 ```
 
-- If `JIRA_API_TOKEN` is missing: print a clear warning, skip Jira create, still send Slack
-- Jira create failures must not abort downloads (`|| true` / non-fatal)
+**Never** send `{"text":"..."}` to this webhook — Workflow Builder variables will not populate.
 
-### Issue summary
-
-```text
-AO Bulk Export Review — <Company> / <Entity> (<Case ID>)
-```
-
-### Issue description (plain text via REST API v2)
+### `Rest_of_Details` format (Unicode plain text)
 
 ```text
-Automatic review request from AO Bulk Export download script.
-
-Requester (Slack UserName): <user name>
-Case ID: <case id>
-Company: <company name>
-Entity: <entity name>
+AO Bulk Export - Workflow Triggered ✅
 
 Download results:
 - Successful: <n>
 - Skipped: <n>
 - Failed: <n>
 - Files attempted: <TOTAL_FILES>
-- Download folder: <entity folder>
+- Download folder: <EntityName>
 
-Note: Jira API authenticated as adharewa@rippling.com. Requester is the Slack UserName above.
+Requester:
+- User_mail: <User_mail>
+- UserID: <UserID>
 ```
 
-### Labels
-
-`ao-bulk-export`, `review-request`
-
-### REST call
-
-```bash
-POST "$JIRA_BASE_URL/rest/api/2/issue"
-Auth: curl -u "adharewa@rippling.com:$JIRA_API_TOKEN"
-Content-Type: application/json
-```
-
-Parse response `key` (e.g. `AOPS-123`) and build browse URL:
-`$JIRA_BASE_URL/browse/$JIRA_ISSUE_KEY`
-
-## Slack completion message (only)
-
-Post **exactly one** Slack message **after** downloads finish and **after** the Jira attempt.
-
-**Webhook resolution:**
-1. `$SLACK_WEBHOOK_URL` if set
-2. Else: `https://hooks.slack.com/triggers/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`
-
-**Payload:** `{"text":"<multi-line message>"}` — bash-only JSON (never `python3`, never `sed`).
-
-**Layout (Unicode only — Workflow Builder does not render mrkdwn reliably):**
+If `Failed` > 0, use ⚠️ in the first line and append:
 
 ```text
-AO Bulk Export - Workflow Triggered ✅
-
-━━━━━━━━━━━━━━━━━━━━
-📋 RUN DETAILS
-━━━━━━━━━━━━━━━━━━━━
-👤 User:      <user name>
-🎫 Case ID:   <case id>
-🏢 Company:   <company name>
-🏛 Entity:    <entity name>
-
-━━━━━━━━━━━━━━━━━━━━
-📊 RESULTS
-━━━━━━━━━━━━━━━━━━━━
-🟢 Successful:       <n>
-🟡 Skipped:          <n>
-🔴 Failed:           <n>
-📁 Files attempted:  <TOTAL_FILES>
-📂 Download folder:  <entity folder>
-
-━━━━━━━━━━━━━━━━━━━━
-🎫 JIRA
-━━━━━━━━━━━━━━━━━━━━
-🔗 Issue: <AOPS-123 or "not created">
-🌐 Link:  <browse URL or "n/a">
+Action needed: one or more downloads failed — re-check before upload.
 ```
 
-If `Failed` > 0, use ⚠️ in the title and append:
+### JSON encoding
 
-```text
-⚠️ Action needed: one or more downloads failed — re-check before upload.
-```
+- Build the object with bash-only escaping (`json_escape`)
+- **Never** use `python3` (macOS Xcode stub) or `sed` for JSON escaping
+- Slack failures must not abort the script
 
-Do **not** include Next step or `@acc-ops-seniors`.
+## Jira (`AOPS`) — via Slack workflow (not curl in script)
+
+The Slack workflow that owns this webhook creates the Jira issue in project **`AOPS`**.
+
+| Concern | Rule |
+|---|---|
+| Project | `AOPS` |
+| No Jira button | Issue is created by the workflow after webhook receive |
+| API auth in workflow | `adharewa@rippling.com` + stored API token (workflow credentials) |
+| Requester in Jira | Map from webhook `User_mail` / `UserID` (not the service account) |
+| Case / Company / Entity | Map from `Case`, `CompanyName`, `EntityName`, `CID` |
+| Description body | Map from `Rest_of_Details` |
+
+The generated Bash script must **not** call the Jira REST API directly (avoids duplicate tickets). Document workflow field mapping in `JIRA-INTEGRATION-SPEC.md`.
 
 ## Response format
 
 1. Script file `<ENTITY_NAME>.sh` (and bash fence if needed)
-2. Brief confirmation (omitted labels + Jira AOPS + Slack once)
-3. macOS run commands + required env vars
+2. Brief confirmation (omitted labels + Slack webhook schema + Jira via workflow)
+3. macOS run commands
 
 ### Chat confirmation (example)
 
 ```text
 Generated: Acme Corporation.sh (14 downloads).
-Prompts: user name, case ID, company name, entity name.
-Jira: creates AOPS Task after downloads (auth adharewa@rippling.com; requester = User name).
-Slack: one completion message including Jira key/link.
+Prompts: Case, EntityName, CompanyName, User_mail, UserID, CID.
+Slack: one workflow webhook POST with those keys + Rest_of_Details.
+Jira: created by Slack workflow into AOPS (no Jira button in script).
 Omitted (no links): PRELIM_W2
-
-Before first run:
-export JIRA_API_TOKEN='...'
 ```
 
 ### macOS execution
 
 ```bash
-export JIRA_API_TOKEN='your_atlassian_api_token'
-# optional: export JIRA_BASE_URL='https://rippling.atlassian.net'
-# optional: export SLACK_WEBHOOK_URL='https://hooks.slack.com/triggers/...'
+# optional override:
+# export SLACK_WEBHOOK_URL='https://hooks.slack.com/triggers/...'
 
 cd ~/Downloads
 chmod +x '<ENTITY_NAME>.sh'
@@ -254,7 +215,7 @@ set -e
 # AO Bulk Export Download Script
 #
 # Generated by:
-# AO - Bulk Export Download Script Generator V3.4
+# AO - Bulk Export Download Script Generator V3.5
 #
 # Created by:
 # Arham Dharewa
@@ -280,20 +241,8 @@ SKIPPED=0
 TOTAL_FILES=NUMBER_OF_DOWNLOADS
 CURRENT=0
 
-JIRA_ISSUE_KEY=''
-JIRA_ISSUE_URL=''
-JIRA_CREATE_STATUS='not created'
-
-# --- Slack ---
+# Slack workflow webhook ("From a webhook" variables)
 SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL:-https://hooks.slack.com/triggers/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}"
-
-# --- Jira (AOPS) ---
-# Auth email is the service account ONLY. Requester = prompted USER_NAME (Slack UserName).
-JIRA_EMAIL='adharewa@rippling.com'
-JIRA_API_TOKEN="${JIRA_API_TOKEN:-}"
-JIRA_BASE_URL="${JIRA_BASE_URL:-https://rippling.atlassian.net}"
-JIRA_PROJECT_KEY='AOPS'
-JIRA_ISSUE_TYPE="${JIRA_ISSUE_TYPE:-Task}"
 
 json_escape() {
     local s=$1
@@ -305,101 +254,38 @@ json_escape() {
     printf '%s' "$s"
 }
 
-build_slack_payload() {
-    local msg="$1"
-    # Bash-only JSON — never call python3 (macOS Xcode CLT stub)
-    printf '{"text":"%s"}' "$(json_escape "$msg")"
+# Exact Workflow Builder schema — do not rename keys
+build_slack_workflow_payload() {
+    printf '{"Case":"%s","EntityName":"%s","CompanyName":"%s","User_mail":"%s","UserID":"%s","Rest_of_Details":"%s","CID":"%s"}' \
+        "$(json_escape "$Case")" \
+        "$(json_escape "$EntityName")" \
+        "$(json_escape "$CompanyName")" \
+        "$(json_escape "$User_mail")" \
+        "$(json_escape "$UserID")" \
+        "$(json_escape "$Rest_of_Details")" \
+        "$(json_escape "$CID")"
 }
 
-notify_slack() {
-    local msg="$1"
+notify_slack_workflow() {
     local payload response http_code body
     [ -z "$SLACK_WEBHOOK_URL" ] && return 0
-    payload="$(build_slack_payload "$msg")" || {
+    payload="$(build_slack_workflow_payload)" || {
         echo -e "${YELLOW}Slack payload build failed.${NC}"
         return 0
     }
+    echo -e "${BLUE}Triggering Slack workflow webhook...${NC}"
     response="$(curl -sS -w $'\n%{http_code}' -X POST \
-        -H 'Content-type: application/json; charset=utf-8' \
+        -H 'Content-Type: application/json' \
         --data-binary "$payload" \
         "$SLACK_WEBHOOK_URL" 2>&1)" || true
     http_code="$(printf '%s\n' "$response" | tail -n 1)"
     body="$(printf '%s\n' "$response" | sed '$d')"
     if [ "$http_code" = "200" ]; then
-        echo -e "${BLUE}Slack completion message sent.${NC}"
+        echo -e "${GREEN}Slack workflow triggered.${NC}"
     else
-        echo -e "${YELLOW}Slack completion message did not trigger.${NC}"
+        echo -e "${YELLOW}Slack workflow did not trigger.${NC}"
         echo -e "${YELLOW}Slack response code: ${http_code}${NC}"
         echo -e "${YELLOW}Slack response body:${NC}"
-        echo "$body"
-    fi
-}
-
-create_jira_issue() {
-    local summary description payload response http_code body
-    JIRA_ISSUE_KEY=''
-    JIRA_ISSUE_URL=''
-    JIRA_CREATE_STATUS='not created'
-
-    if [ -z "$JIRA_API_TOKEN" ]; then
-        echo -e "${YELLOW}Jira skipped: JIRA_API_TOKEN is not set.${NC}"
-        echo -e "${YELLOW}Set it with: export JIRA_API_TOKEN='your_atlassian_api_token'${NC}"
-        return 0
-    fi
-
-    summary="AO Bulk Export Review — ${COMPANY_NAME} / ${ENTITY_DIR} (${CASE_ID})"
-    description=$(cat <<EOF
-Automatic review request from AO Bulk Export download script.
-
-Requester (Slack UserName): ${USER_NAME}
-Case ID: ${CASE_ID}
-Company: ${COMPANY_NAME}
-Entity: ${ENTITY_DIR}
-
-Download results:
-- Successful: ${SUCCESS}
-- Skipped: ${SKIPPED}
-- Failed: ${FAILED}
-- Files attempted: ${TOTAL_FILES}
-- Download folder: ${ENTITY_DIR}
-
-Note: Jira API authenticated as ${JIRA_EMAIL}. Requester is the Slack UserName above.
-EOF
-)
-
-    payload=$(printf '{"fields":{"project":{"key":"%s"},"summary":"%s","issuetype":{"name":"%s"},"labels":["ao-bulk-export","review-request"],"description":"%s"}}' \
-        "$(json_escape "$JIRA_PROJECT_KEY")" \
-        "$(json_escape "$summary")" \
-        "$(json_escape "$JIRA_ISSUE_TYPE")" \
-        "$(json_escape "$description")")
-
-    echo -e "${BLUE}Creating Jira issue in ${JIRA_PROJECT_KEY}...${NC}"
-    response="$(curl -sS -w $'\n%{http_code}' -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
-        -X POST \
-        -H 'Content-Type: application/json' \
-        -H 'Accept: application/json' \
-        --data-binary "$payload" \
-        "${JIRA_BASE_URL}/rest/api/2/issue" 2>&1)" || true
-
-    http_code="$(printf '%s\n' "$response" | tail -n 1)"
-    body="$(printf '%s\n' "$response" | sed '$d')"
-
-    if [ "$http_code" = "201" ] || [ "$http_code" = "200" ]; then
-        JIRA_ISSUE_KEY="$(printf '%s' "$body" | sed -n 's/.*"key"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
-        if [ -n "$JIRA_ISSUE_KEY" ]; then
-            JIRA_ISSUE_URL="${JIRA_BASE_URL}/browse/${JIRA_ISSUE_KEY}"
-            JIRA_CREATE_STATUS="$JIRA_ISSUE_KEY"
-            echo -e "${GREEN}Jira issue created: ${JIRA_ISSUE_KEY}${NC}"
-            echo -e "${BLUE}${JIRA_ISSUE_URL}${NC}"
-        else
-            JIRA_CREATE_STATUS='created (key parse failed)'
-            echo -e "${YELLOW}Jira issue created but key could not be parsed.${NC}"
-            echo "$body"
-        fi
-    else
-        JIRA_CREATE_STATUS='failed'
-        echo -e "${YELLOW}Jira issue creation failed.${NC}"
-        echo -e "${YELLOW}HTTP ${http_code}${NC}"
         echo "$body"
     fi
 }
@@ -408,53 +294,60 @@ echo -e "${CYAN}==========================================${NC}"
 echo -e "${CYAN}Rippling Bulk Export Downloader${NC}"
 echo -e "${CYAN}==========================================${NC}"
 echo ""
-echo -e "${BLUE}Enter run details${NC}"
+echo -e "${BLUE}Enter Slack workflow run details${NC}"
 echo ""
 
-while [ -z "${USER_NAME:-}" ]; do
-    read -r -p "User name (Slack requester): " USER_NAME
+while [ -z "${Case:-}" ]; do
+    read -r -p "Case: " Case
 done
-while [ -z "${CASE_ID:-}" ]; do
-    read -r -p "Case ID: " CASE_ID
+while [ -z "${CompanyName:-}" ]; do
+    read -r -p "CompanyName: " CompanyName
 done
-while [ -z "${COMPANY_NAME:-}" ]; do
-    read -r -p "Company name: " COMPANY_NAME
+while [ -z "${EntityName:-}" ]; do
+    read -r -p "EntityName [$DEFAULT_ENTITY]: " ENTITY_INPUT
+    EntityName="${ENTITY_INPUT:-$DEFAULT_ENTITY}"
 done
-while [ -z "${ENTITY_DIR:-}" ]; do
-    read -r -p "Entity name [$DEFAULT_ENTITY]: " ENTITY_INPUT
-    ENTITY_DIR="${ENTITY_INPUT:-$DEFAULT_ENTITY}"
+while [ -z "${User_mail:-}" ]; do
+    read -r -p "User_mail: " User_mail
+done
+while [ -z "${UserID:-}" ]; do
+    read -r -p "UserID (e.g. U123456789): " UserID
+done
+while [ -z "${CID:-}" ]; do
+    read -r -p "CID: " CID
 done
 
 echo ""
-echo -e "${BLUE}User (requester):${NC} $USER_NAME"
-echo -e "${BLUE}Case ID:${NC} $CASE_ID"
-echo -e "${BLUE}Company:${NC} $COMPANY_NAME"
-echo -e "${BLUE}Entity:${NC} $ENTITY_DIR"
+echo -e "${BLUE}Case:${NC} $Case"
+echo -e "${BLUE}CompanyName:${NC} $CompanyName"
+echo -e "${BLUE}EntityName:${NC} $EntityName"
+echo -e "${BLUE}User_mail:${NC} $User_mail"
+echo -e "${BLUE}UserID:${NC} $UserID"
+echo -e "${BLUE}CID:${NC} $CID"
 echo -e "${BLUE}Files to Download:${NC} $TOTAL_FILES"
-echo -e "${BLUE}Download Folder:${NC} $ENTITY_DIR"
-echo -e "${BLUE}Jira:${NC} auto-create in $JIRA_PROJECT_KEY after downloads"
-echo -e "${BLUE}Slack:${NC} one message after completion"
+echo -e "${BLUE}Download Folder:${NC} $EntityName"
+echo -e "${BLUE}Slack:${NC} workflow webhook after completion (Jira AOPS via workflow)"
 echo ""
 echo -e "${CYAN}==========================================${NC}"
 echo ""
 
-mkdir -p "$ENTITY_DIR"
+mkdir -p "$EntityName"
 
 # --- repeat one block per valid URL (CURRENT increments for every block) ---
 CURRENT=$((CURRENT+1))
 echo -e "${BLUE}[$CURRENT/$TOTAL_FILES]${NC}"
 echo "Downloading LABEL..."
-if [ -f "$ENTITY_DIR/LABEL.zip" ]; then
+if [ -f "$EntityName/LABEL.zip" ]; then
     echo -e "${YELLOW}Skipping LABEL (already exists)${NC}"
     SKIPPED=$((SKIPPED+1))
 else
-    if curl -L -f -o "$ENTITY_DIR/LABEL.zip" 'URL_EXACTLY_AS_PROVIDED'; then
+    if curl -L -f -o "$EntityName/LABEL.zip" 'URL_EXACTLY_AS_PROVIDED'; then
         echo -e "${GREEN}✓ LABEL downloaded${NC}"
         SUCCESS=$((SUCCESS+1))
     else
         echo -e "${RED}✗ Failed to download LABEL${NC}"
         FAILED=$((FAILED+1))
-        rm -f "$ENTITY_DIR/LABEL.zip"
+        rm -f "$EntityName/LABEL.zip"
     fi
 fi
 echo ""
@@ -467,66 +360,45 @@ echo -e "${GREEN}Successful :${NC} $SUCCESS"
 echo -e "${YELLOW}Skipped    :${NC} $SKIPPED"
 echo -e "${RED}Failed     :${NC} $FAILED"
 
-create_jira_issue
-
 if [ "$FAILED" -gt 0 ]; then
-    TITLE_EMOJI='⚠️'
-    ACTION_LINE='⚠️ Action needed: one or more downloads failed — re-check before upload.'
+    TITLE_LINE='AO Bulk Export - Workflow Triggered ⚠️'
+    ACTION_LINE='Action needed: one or more downloads failed — re-check before upload.'
 else
-    TITLE_EMOJI='✅'
+    TITLE_LINE='AO Bulk Export - Workflow Triggered ✅'
     ACTION_LINE=''
 fi
 
-if [ -n "$JIRA_ISSUE_KEY" ]; then
-    JIRA_LINK_LINE="$JIRA_ISSUE_URL"
-else
-    JIRA_LINK_LINE='n/a'
-fi
+Rest_of_Details=$(cat <<EOF
+${TITLE_LINE}
 
-SLACK_MSG=$(cat <<EOF
-AO Bulk Export - Workflow Triggered ${TITLE_EMOJI}
+Download results:
+- Successful: ${SUCCESS}
+- Skipped: ${SKIPPED}
+- Failed: ${FAILED}
+- Files attempted: ${TOTAL_FILES}
+- Download folder: ${EntityName}
 
-━━━━━━━━━━━━━━━━━━━━
-📋 RUN DETAILS
-━━━━━━━━━━━━━━━━━━━━
-👤 User:      ${USER_NAME}
-🎫 Case ID:   ${CASE_ID}
-🏢 Company:   ${COMPANY_NAME}
-🏛 Entity:    ${ENTITY_DIR}
-
-━━━━━━━━━━━━━━━━━━━━
-📊 RESULTS
-━━━━━━━━━━━━━━━━━━━━
-🟢 Successful:       ${SUCCESS}
-🟡 Skipped:          ${SKIPPED}
-🔴 Failed:           ${FAILED}
-📁 Files attempted:  ${TOTAL_FILES}
-📂 Download folder:  ${ENTITY_DIR}
-
-━━━━━━━━━━━━━━━━━━━━
-🎫 JIRA
-━━━━━━━━━━━━━━━━━━━━
-🔗 Issue: ${JIRA_CREATE_STATUS}
-🌐 Link:  ${JIRA_LINK_LINE}
+Requester:
+- User_mail: ${User_mail}
+- UserID: ${UserID}
 ${ACTION_LINE:+
 ${ACTION_LINE}}
 EOF
 )
-notify_slack "$SLACK_MSG"
+
+notify_slack_workflow
 
 echo ""
 echo -e "${CYAN}==========================================${NC}"
 echo -e "${GREEN}Download Complete!${NC}"
 echo ""
-echo -e "${BLUE}Entity:${NC} $ENTITY_DIR"
+echo -e "${BLUE}EntityName:${NC} $EntityName"
 echo -e "${GREEN}Successful:${NC} $SUCCESS"
 echo -e "${YELLOW}Skipped:${NC} $SKIPPED"
 echo -e "${RED}Failed:${NC} $FAILED"
-echo -e "${BLUE}Jira:${NC} $JIRA_CREATE_STATUS"
-[ -n "$JIRA_ISSUE_URL" ] && echo -e "${BLUE}Jira URL:${NC} $JIRA_ISSUE_URL"
 echo ""
 echo -e "${BLUE}Location:${NC}"
-echo "$ENTITY_DIR"
+echo "$EntityName"
 echo ""
 echo -e "${CYAN}==========================================${NC}"
 ```
@@ -543,17 +415,16 @@ echo -e "${CYAN}==========================================${NC}"
 
 ### Non-negotiables
 
-- Prompt for user name, case ID, company name, entity name before downloads
-- After downloads: create one Jira issue in `AOPS` (no Jira button)
-- Jira API auth = `adharewa@rippling.com` + `$JIRA_API_TOKEN` only
-- Jira requester field in description = prompted User name (Slack UserName)
-- Never hardcode the API token
-- One Slack message only after downloads + Jira attempt; include Jira key/link
-- Slack JSON via bash-only `json_escape` (never `python3`, never `sed`)
-- Plain-text Unicode Slack layout
-- Jira/Slack failures must not abort the script after downloads
+- Prompt for `Case`, `EntityName`, `CompanyName`, `User_mail`, `UserID`, `CID` before downloads
+- After downloads: one Slack workflow POST with **exact** keys from Workflow Builder
+- Auto-build `Rest_of_Details` (do not prompt for it)
+- Content-Type must be `application/json`
+- Never send `{"text":"..."}` to this webhook
+- Bash-only JSON escaping (never `python3`, never `sed`)
+- Do **not** call Jira REST from the script — Slack workflow creates `AOPS` issues
+- Slack failures must not abort after downloads
 - One `curl -L -f -o` per valid URL; wrap in `if`
-- Save as `.zip` in `"$ENTITY_DIR"`; skip existing; remove partials on failure
+- Save as `.zip` in `"$EntityName"`; skip existing; remove partials on failure
 - Progress: `[CURRENT/TOTAL]` then `Downloading LABEL...`
 - Script header includes Created by: Arham Dharewa
 - URLs and labels unchanged
