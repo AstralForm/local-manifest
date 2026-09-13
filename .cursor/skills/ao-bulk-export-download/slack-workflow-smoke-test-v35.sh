@@ -3,14 +3,14 @@
 set -e
 
 ##############################################
-# AO Bulk Export — Slack/Jira Smoke Test (V3.6)
+# AO Bulk Export — Slack/Jira Smoke Test (V4)
 #
 # Created by: Arham Dharewa
 #
 # Does NOT download files.
 # Prompts include Senior Lead Reviewer (1-5).
-# Creates Jira (if token set), asks Slack yes/no,
-# POSTs webhook only when Slack = yes.
+# Creates Jira (token: env → Keychain → V4 default),
+# asks Slack yes/no, POSTs webhook only when Slack = yes.
 ##############################################
 
 GREEN='\033[0;32m'
@@ -26,7 +26,11 @@ TOTAL_FILES=7
 
 SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL:-https://hooks.slack.com/triggers/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}"
 JIRA_EMAIL='adharewa@rippling.com'
-JIRA_API_TOKEN="${JIRA_API_TOKEN:-}"
+JIRA_API_TOKEN_DEFAULT='ATATT3xFfGF0a5Xm7hjxT-bgvCRnL6kGDVOrQEcohQapWzTqZ2l87s5fKuAO3axBbspWeu3O4LvjOBw5DlhELp5Nfq5l7nuuLaPiN6i_P6DH0khuuoDRS9BB9zCwPUnt1uLIXyRBHOdpd5vkIflfyAT_3NgErPYZBri7mLcTLc1_hOxFBkzbnfg=89506F7D'
+if [ -z "${JIRA_API_TOKEN:-}" ]; then
+    JIRA_API_TOKEN="$(security find-generic-password -a 'adharewa@rippling.com' -s 'ao-bulk-export-jira-api-token' -w 2>/dev/null || true)"
+fi
+JIRA_API_TOKEN="${JIRA_API_TOKEN:-$JIRA_API_TOKEN_DEFAULT}"
 JIRA_BASE_URL="${JIRA_BASE_URL:-https://rippling.atlassian.net}"
 Jira_link=''
 Senior_Lead_Reviewer=''
@@ -55,7 +59,7 @@ build_slack_workflow_payload() {
 }
 
 echo -e "${CYAN}==========================================${NC}"
-echo -e "${CYAN}AO Slack/Jira Smoke Test V3.6${NC}"
+echo -e "${CYAN}AO Slack/Jira Smoke Test V4${NC}"
 echo -e "${CYAN}==========================================${NC}"
 echo ""
 
@@ -140,7 +144,7 @@ EOF
     fi
 else
     Jira_link='n/a'
-    echo -e "${YELLOW}JIRA_API_TOKEN not set — Jira_link=n/a${NC}"
+    echo -e "${YELLOW}No Jira API token available — Jira_link=n/a${NC}"
 fi
 
 SEND_SLACK=''

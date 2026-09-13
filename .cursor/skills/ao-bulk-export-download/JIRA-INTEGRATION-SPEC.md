@@ -1,4 +1,4 @@
-# AO Bulk Export → Jira + Slack Webhook (V3.6)
+# AO Bulk Export → Jira + Slack Webhook (V4)
 
 ## Architecture
 
@@ -37,6 +37,23 @@ Content-Type: `application/json`
 | 3 | Jake Sagadraca | jsagadraca@rippling.com |
 | 4 | Padmanabh Kshirsagar | pkshirsagar@rippling.com |
 | 5 | Vee Tamang | btamang@rippling.com |
+
+## Jira auth (V4)
+
+| Concern | Value |
+|---|---|
+| Auth email | `adharewa@rippling.com` |
+| Project | `AOPS` |
+| Issue type | `Task` |
+| Base URL | `https://rippling.atlassian.net` (override with `$JIRA_BASE_URL`) |
+
+**Token resolution order:**
+
+1. `$JIRA_API_TOKEN` environment variable
+2. macOS Keychain item `ao-bulk-export-jira-api-token` (account `adharewa@rippling.com`)
+3. Embedded V4 limited-access default in generated scripts / `SKILL.md`
+
+Do **not** also create a Jira issue from the Slack workflow (duplicates). Display `{Jira_link}` in the message and remove the red JIRA button.
 
 ## Workflow message (insert variables)
 
