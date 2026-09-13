@@ -247,10 +247,12 @@ After downloads (before Slack), the script creates one Jira issue and sets `Jira
 | Project | `AOPS` |
 | Issue type | `Task` (override with `$JIRA_ISSUE_TYPE`) |
 | API auth email | `adharewa@rippling.com` (**auth only**) |
-| API token | Resolution order: `$JIRA_API_TOKEN` env → macOS Keychain → embedded V4 limited-access default in generated script |
-| Base URL | `$JIRA_BASE_URL` (default `https://rippling.atlassian.net`) |
+| API token | Resolution order: `$JIRA_API_TOKEN` env → macOS Keychain → embedded V4 scoped default (`read:jira-work` + `write:jira-work`) |
+| Required scopes | Classic: `write:jira-work` (create) + `read:jira-work` (project/type resolve). No Confluence / manage scopes. |
+| API base (scoped) | `$JIRA_API_BASE` default `https://api.atlassian.com/ex/jira/{cloudId}` (scoped tokens **must** use gateway, not site URL) |
+| Browse / `Jira_link` | `$JIRA_SITE_URL/browse/{KEY}` default site `https://rippling.atlassian.net` |
 | Requester in description | `User_mail` + `UserID` from prompts |
-| `Jira_link` value | `{JIRA_BASE_URL}/browse/{KEY}` or `n/a` if skipped/failed |
+| `Jira_link` value | `{JIRA_SITE_URL}/browse/{KEY}` or `n/a` if skipped/failed |
 
 Slack workflow should **display** `{{Jira_link}}` in the channel message. Do **not** also create a second Jira issue in the workflow (avoids duplicates). Remove the red **JIRA** button.
 
@@ -269,7 +271,7 @@ Jira: creates AOPS Task after downloads; sends Jira_link in Slack webhook.
 Slack: one workflow POST with Case/EntityName/CompanyName/User_mail/UserID/Rest_of_Details/CID/Jira_link/Senior_Lead_Reviewer.
 Omitted (no links): PRELIM_W2
 
-Jira token: embedded limited-access default in V4 (override with env/Keychain if needed).
+Jira token: embedded scoped V4 default (read:jira-work + write:jira-work); override with env/Keychain if needed.
 ```
 
 ### macOS execution
@@ -277,7 +279,8 @@ Jira token: embedded limited-access default in V4 (override with env/Keychain if
 ```bash
 # optional overrides only:
 # export JIRA_API_TOKEN='...'
-# export JIRA_BASE_URL='https://rippling.atlassian.net'
+# export JIRA_CLOUD_ID='969226a5-2105-49eb-a9f7-e3852660973e'
+# export JIRA_SITE_URL='https://rippling.atlassian.net'
 # export SLACK_WEBHOOK_URL='https://hooks.slack.com/triggers/...'
 
 cd ~/Downloads
@@ -340,13 +343,16 @@ json_escape() {
 # Exact Workflow Builder schema — do not rename keys
 # Jira (created in script; link sent to Slack as Jira_link)
 JIRA_EMAIL='adharewa@rippling.com'
-# Token resolution: env → Keychain → embedded limited-access default (V4)
-JIRA_API_TOKEN_DEFAULT='ATATT3xFfGF0a5Xm7hjxT-bgvCRnL6kGDVOrQEcohQapWzTqZ2l87s5fKuAO3axBbspWeu3O4LvjOBw5DlhELp5Nfq5l7nuuLaPiN6i_P6DH0khuuoDRS9BB9zCwPUnt1uLIXyRBHOdpd5vkIflfyAT_3NgErPYZBri7mLcTLc1_hOxFBkzbnfg=89506F7D'
+# Token resolution: env → Keychain → embedded scoped default (V4)
+# Scopes required: classic read:jira-work + write:jira-work
+JIRA_API_TOKEN_DEFAULT='ATATT3xFfGF0uREu47ts2Jr-Quz-ygsQ0W-QuuX3pDoqxjezfupGdS-pMfm-91oEPZJrbrysTMZG3iBHPKak_zbbwZhAZFwCh3rug-hNSH--puX3rzSzSGpRGcqXjDcJghxQXh9pxfwQgKxTBfR4252aVkO_5-IJQgJSWi3Vzz7dBHIrqH9sjus=5B77062D'
 if [ -z "${JIRA_API_TOKEN:-}" ]; then
     JIRA_API_TOKEN="$(security find-generic-password -a 'adharewa@rippling.com' -s 'ao-bulk-export-jira-api-token' -w 2>/dev/null || true)"
 fi
 JIRA_API_TOKEN="${JIRA_API_TOKEN:-$JIRA_API_TOKEN_DEFAULT}"
-JIRA_BASE_URL="${JIRA_BASE_URL:-https://rippling.atlassian.net}"
+JIRA_SITE_URL="${JIRA_SITE_URL:-https://rippling.atlassian.net}"
+JIRA_CLOUD_ID="${JIRA_CLOUD_ID:-969226a5-2105-49eb-a9f7-e3852660973e}"
+JIRA_API_BASE="${JIRA_API_BASE:-https://api.atlassian.com/ex/jira/${JIRA_CLOUD_ID}}"
 JIRA_PROJECT_KEY='AOPS'
 JIRA_ISSUE_TYPE="${JIRA_ISSUE_TYPE:-Task}"
 Jira_link=''
@@ -392,13 +398,13 @@ EOF
         -H 'Content-Type: application/json' \
         -H 'Accept: application/json' \
         --data-binary "$payload" \
-        "${JIRA_BASE_URL}/rest/api/2/issue" 2>&1)" || true
+        "${JIRA_API_BASE}/rest/api/2/issue" 2>&1)" || true
     http_code="$(printf '%s\n' "$response" | tail -n 1)"
     body="$(printf '%s\n' "$response" | sed '$d')"
     if [ "$http_code" = "201" ] || [ "$http_code" = "200" ]; then
         key="$(printf '%s' "$body" | sed -n 's/.*"key"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
         if [ -n "$key" ]; then
-            Jira_link="${JIRA_BASE_URL}/browse/${key}"
+            Jira_link="${JIRA_SITE_URL}/browse/${key}"
             echo -e "${GREEN}Jira issue created: ${key}${NC}"
             echo -e "${BLUE}${Jira_link}${NC}"
         else
@@ -619,8 +625,10 @@ echo -e "${CYAN}==========================================${NC}"
 - Content-Type must be `application/json`
 - Never send `{"text":"..."}` to this webhook
 - Bash-only JSON escaping (never `python3`, never `sed`)
-- After downloads: create one Jira `AOPS` issue (auth `adharewa@rippling.com` + token); set `Jira_link`
-- Token resolution: `$JIRA_API_TOKEN` → macOS Keychain `ao-bulk-export-jira-api-token` → embedded V4 limited-access default
+- After downloads: create one Jira `AOPS` issue (auth `adharewa@rippling.com` + scoped token); set `Jira_link`
+- Token scopes: classic `read:jira-work` + `write:jira-work` only
+- Token resolution: `$JIRA_API_TOKEN` → macOS Keychain `ao-bulk-export-jira-api-token` → embedded V4 scoped default
+- Create via gateway `$JIRA_API_BASE` (`api.atlassian.com/ex/jira/{cloudId}`); browse links use `$JIRA_SITE_URL`
 - Missing token → `Jira_link=n/a`
 - Slack failures must not abort after downloads
 - One `curl -L -f -o` per valid URL; wrap in `if`

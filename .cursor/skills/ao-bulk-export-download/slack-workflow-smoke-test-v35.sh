@@ -26,12 +26,15 @@ TOTAL_FILES=7
 
 SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL:-https://hooks.slack.com/triggers/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}"
 JIRA_EMAIL='adharewa@rippling.com'
-JIRA_API_TOKEN_DEFAULT='ATATT3xFfGF0a5Xm7hjxT-bgvCRnL6kGDVOrQEcohQapWzTqZ2l87s5fKuAO3axBbspWeu3O4LvjOBw5DlhELp5Nfq5l7nuuLaPiN6i_P6DH0khuuoDRS9BB9zCwPUnt1uLIXyRBHOdpd5vkIflfyAT_3NgErPYZBri7mLcTLc1_hOxFBkzbnfg=89506F7D'
+# Scopes: classic read:jira-work + write:jira-work
+JIRA_API_TOKEN_DEFAULT='ATATT3xFfGF0uREu47ts2Jr-Quz-ygsQ0W-QuuX3pDoqxjezfupGdS-pMfm-91oEPZJrbrysTMZG3iBHPKak_zbbwZhAZFwCh3rug-hNSH--puX3rzSzSGpRGcqXjDcJghxQXh9pxfwQgKxTBfR4252aVkO_5-IJQgJSWi3Vzz7dBHIrqH9sjus=5B77062D'
 if [ -z "${JIRA_API_TOKEN:-}" ]; then
     JIRA_API_TOKEN="$(security find-generic-password -a 'adharewa@rippling.com' -s 'ao-bulk-export-jira-api-token' -w 2>/dev/null || true)"
 fi
 JIRA_API_TOKEN="${JIRA_API_TOKEN:-$JIRA_API_TOKEN_DEFAULT}"
-JIRA_BASE_URL="${JIRA_BASE_URL:-https://rippling.atlassian.net}"
+JIRA_SITE_URL="${JIRA_SITE_URL:-https://rippling.atlassian.net}"
+JIRA_CLOUD_ID="${JIRA_CLOUD_ID:-969226a5-2105-49eb-a9f7-e3852660973e}"
+JIRA_API_BASE="${JIRA_API_BASE:-https://api.atlassian.com/ex/jira/${JIRA_CLOUD_ID}}"
 Jira_link=''
 Senior_Lead_Reviewer=''
 
@@ -128,13 +131,13 @@ EOF
     echo -e "${BLUE}Creating Jira issue in AOPS...${NC}"
     response="$(curl -sS -w $'\n%{http_code}' -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
         -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' \
-        --data-binary "$payload" "${JIRA_BASE_URL}/rest/api/2/issue" 2>&1)" || true
+        --data-binary "$payload" "${JIRA_API_BASE}/rest/api/2/issue" 2>&1)" || true
     http_code="$(printf '%s\n' "$response" | tail -n 1)"
     body="$(printf '%s\n' "$response" | sed '$d')"
     echo -e "${BLUE}Jira HTTP ${http_code}${NC}"
     if [ "$http_code" = "201" ] || [ "$http_code" = "200" ]; then
         key="$(printf '%s' "$body" | sed -n 's/.*"key"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
-        Jira_link="${JIRA_BASE_URL}/browse/${key}"
+        Jira_link="${JIRA_SITE_URL}/browse/${key}"
         echo -e "${GREEN}Jira created: ${key}${NC}"
         echo -e "${BLUE}${Jira_link}${NC}"
     else
