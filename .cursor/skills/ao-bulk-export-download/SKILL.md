@@ -100,9 +100,25 @@ Do **not** call Slack at start. Do **not** post per-file Slack updates.
 
 `Rest_of_Details` is **not** prompted — the script builds it after downloads.
 
+### Slack send confirmation (required)
+
+**After downloads + Jira create**, ask:
+
+```text
+Send Slack notification? (yes/no):
+```
+
+| Answer | Behavior |
+|---|---|
+| `yes` / `y` (case-insensitive) | POST the Slack workflow webhook |
+| `no` / `n` (case-insensitive) | Skip Slack entirely — do not trigger the webhook |
+| anything else | Re-prompt until yes or no |
+
+Jira create still runs even if Slack is skipped.
+
 ## Slack workflow webhook (only completion trigger)
 
-After downloads finish (counters final), POST **exactly one** request to the Slack workflow webhook.
+After downloads finish (counters final) **and after Jira create**, if the operator answered **yes** to Slack, POST **exactly one** request to the Slack workflow webhook. If they answered **no**, skip Slack.
 
 ### Webhook URL resolution
 
@@ -440,8 +456,8 @@ echo -e "${BLUE}UserID:${NC} $UserID"
 echo -e "${BLUE}CID:${NC} $CID"
 echo -e "${BLUE}Files to Download:${NC} $TOTAL_FILES"
 echo -e "${BLUE}Download Folder:${NC} $EntityName"
-echo -e "${BLUE}Jira:${NC} auto-create AOPS issue, then Slack webhook with Jira_link"
-echo -e "${BLUE}Slack:${NC} workflow webhook after completion"
+echo -e "${BLUE}Jira:${NC} auto-create AOPS issue"
+echo -e "${BLUE}Slack:${NC} optional — asked after downloads"
 echo ""
 echo -e "${CYAN}==========================================${NC}"
 echo ""
@@ -501,7 +517,23 @@ EOF
 
 create_jira_issue
 
-notify_slack_workflow
+SEND_SLACK=''
+while true; do
+    read -r -p "Send Slack notification? (yes/no): " SEND_SLACK
+    case "$(printf '%s' "$SEND_SLACK" | tr '[:upper:]' '[:lower:]')" in
+        yes|y)
+            notify_slack_workflow
+            break
+            ;;
+        no|n)
+            echo -e "${YELLOW}Slack notification skipped.${NC}"
+            break
+            ;;
+        *)
+            echo -e "${YELLOW}Please answer yes or no.${NC}"
+            ;;
+    esac
+done
 
 echo ""
 echo -e "${CYAN}==========================================${NC}"
@@ -532,14 +564,15 @@ echo -e "${CYAN}==========================================${NC}"
 ### Non-negotiables
 
 - Prompt for `Case`, `EntityName`, `CompanyName`, `User_mail`, `UserID`, `CID` before downloads
-- After downloads: one Slack workflow POST with **exact** keys from Workflow Builder
+- After downloads + Jira: ask `Send Slack notification? (yes/no)` — only POST webhook on yes
+- On Slack `no`, do not trigger the webhook
+- When Slack is yes: one workflow POST with **exact** keys from Workflow Builder (including `Jira_link`)
 - Auto-build `Rest_of_Details` (do not prompt for it)
 - Content-Type must be `application/json`
 - Never send `{"text":"..."}` to this webhook
 - Bash-only JSON escaping (never `python3`, never `sed`)
 - After downloads: create one Jira `AOPS` issue (auth `adharewa@rippling.com` + `$JIRA_API_TOKEN`); set `Jira_link`
-- Slack webhook must include `Jira_link`
-- Never hardcode the API token; missing token → `Jira_link=n/a`, still Slack
+- Never hardcode the API token in the skill or generated script; missing token → `Jira_link=n/a`
 - Slack failures must not abort after downloads
 - One `curl -L -f -o` per valid URL; wrap in `if`
 - Save as `.zip` in `"$EntityName"`; skip existing; remove partials on failure
