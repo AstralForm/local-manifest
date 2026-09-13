@@ -133,20 +133,12 @@ After downloads finish (counters final), POST **exactly one** request to the Sla
 
 ### `Rest_of_Details` format (Unicode plain text)
 
-Include run identity + results so Slack still looks correct even if the workflow message step only inserts `Rest_of_Details`.
+Do **not** repeat Case / Company / Entity / CID / User_mail / UserID here — the Slack workflow message already shows those fields. `Rest_of_Details` is only status + RESULTS.
 
-Use Unicode emoji (not `:shortcodes:`) so Workflow Builder renders them instead of showing raw `:bar_chart:` text.
+Use Unicode emoji (not `:shortcodes:`) so Workflow Builder renders them.
 
 ```text
 AO Bulk Export - Workflow Triggered ✅
-
-Run details:
-- Case: <Case>
-- CompanyName: <CompanyName>
-- EntityName: <EntityName>
-- CID: <CID>
-- User_mail: <User_mail>
-- UserID: <UserID>
 
 ━━━━━━━━━━━━━━━━━━━━
 📊 RESULTS
@@ -414,14 +406,6 @@ fi
 
 Rest_of_Details=$(cat <<EOF
 ${TITLE_LINE}
-
-Run details:
-- Case: ${Case}
-- CompanyName: ${CompanyName}
-- EntityName: ${EntityName}
-- CID: ${CID}
-- User_mail: ${User_mail}
-- UserID: ${UserID}
 
 ━━━━━━━━━━━━━━━━━━━━
 📊 RESULTS

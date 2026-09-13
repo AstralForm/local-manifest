@@ -69,14 +69,6 @@ fi
 Rest_of_Details=$(cat <<EOF
 ${TITLE_LINE}
 
-Run details:
-- Case: ${Case}
-- CompanyName: ${CompanyName}
-- EntityName: ${EntityName}
-- CID: ${CID}
-- User_mail: ${User_mail}
-- UserID: ${UserID}
-
 ━━━━━━━━━━━━━━━━━━━━
 📊 RESULTS
 ━━━━━━━━━━━━━━━━━━━━

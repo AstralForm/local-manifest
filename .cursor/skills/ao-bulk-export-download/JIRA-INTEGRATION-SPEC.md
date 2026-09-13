@@ -94,7 +94,7 @@ Publish the workflow after saving.
   "CompanyName": "Acme Corp",
   "User_mail": "ada@rippling.com",
   "UserID": "U123456789",
-  "Rest_of_Details": "AO Bulk Export - Workflow Triggered ✅\n\nRun details:\n- Case: CASE-12345\n...",
+  "Rest_of_Details": "AO Bulk Export - Workflow Triggered ✅\n\n━━━━━━━━━━━━━━━━━━━━\n📊 RESULTS\n━━━━━━━━━━━━━━━━━━━━\n🟢 Successful:       1\n🟡 Skipped:          0\n🔴 Failed:           0\n📁 Files attempted:  1\n📂 Download folder:  Acme Corporation",
   "CID": "CID-001"
 }
 ```
