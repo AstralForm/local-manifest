@@ -4,7 +4,7 @@ description: >-
   Generate a macOS-ready Bash download script from Rippling Bulk Export (or similar)
   raw text dumps containing an entity name, document labels (PAYSTUB, HUB, PRELIM_W2, W2),
   download URLs, or "No links found". At run time the script asks for Case, EntityName,
-  CompanyName, User_mail, UserID, and CID; after downloads it creates a Jira AOPS issue, then POSTs one Slack
+  CompanyName, User_mail, UserID, CID, and Senior Lead Reviewer; after downloads it creates a Jira AOPS issue, then POSTs one Slack
   workflow webhook including Jira_link using the exact variable schema (no Jira button). Use whenever the user pastes such export text or asks for AO bulk
   export download script generation (V3.6).
 ---
@@ -16,7 +16,7 @@ description: >-
 When this skill loads and no dump has been pasted yet, reply only:
 
 ```text
-Ready. Please paste your raw text dump. I'll generate a downloadable Bash script named after the entity (for example, Acme Corporation.sh) with valid download commands, interactive prompts matching the Slack webhook variables (Case / EntityName / CompanyName / User_mail / UserID / CID / Jira_link), Jira AOPS create, one Slack workflow trigger after downloads, and the macOS run commands.
+Ready. Please paste your raw text dump. I'll generate a downloadable Bash script named after the entity (for example, Acme Corporation.sh) with valid download commands, interactive prompts matching the Slack webhook variables (Case / EntityName / CompanyName / User_mail / UserID / CID / Jira_link / Senior_Lead_Reviewer), Jira AOPS create, one Slack workflow trigger after downloads, and the macOS run commands.
 ```
 
 ## When to use
@@ -93,8 +93,31 @@ At the **start** of every generated script (before downloads), prompt for these 
 | User email | `User_mail` | Requester email for workflow / Jira |
 | Slack User ID | `UserID` | e.g. `U123456789` |
 | CID | `CID` | As used by AO / workflow |
+| Senior Lead Reviewer | `Senior_Lead_Reviewer` | Menu selection → email address |
 
 Re-prompt if any value is empty.
+
+#### Senior Lead Reviewer menu (required)
+
+Show this numbered menu and accept `1`–`5` only (re-prompt on invalid input):
+
+```text
+Select Senior Lead Reviewer:
+  1) Satvik Mishra          <smishra@rippling.com>
+  2) Pratisruti Roy         <proy@rippling.com>
+  3) Jake Sagadraca         <jsagadraca@rippling.com>
+  4) Padmanabh Kshirsagar   <pkshirsagar@rippling.com>
+  5) Vee Tamang             <btamang@rippling.com>
+Enter option (1-5):
+```
+
+| Option | Name | Email stored in `Senior_Lead_Reviewer` |
+|---|---|---|
+| 1 | Satvik Mishra | `smishra@rippling.com` |
+| 2 | Pratisruti Roy | `proy@rippling.com` |
+| 3 | Jake Sagadraca | `jsagadraca@rippling.com` |
+| 4 | Padmanabh Kshirsagar | `pkshirsagar@rippling.com` |
+| 5 | Vee Tamang | `btamang@rippling.com` |
 
 Do **not** call Slack at start. Do **not** post per-file Slack updates.
 
@@ -141,7 +164,8 @@ After downloads finish (counters final) **and after Jira create**, if the operat
   "UserID": "<UserID>",
   "Rest_of_Details": "<auto-built summary>",
   "CID": "<CID>",
-  "Jira_link": "<https://.../browse/AOPS-123>"
+  "Jira_link": "<https://.../browse/AOPS-123>",
+  "Senior_Lead_Reviewer": "<selected reviewer email>"
 }
 ```
 
@@ -198,6 +222,7 @@ Entity: {{EntityName}}
 CID: {{CID}}
 Requester email: {{User_mail}}
 Requester Slack ID: {{UserID}}
+Senior Lead Reviewer: {{Senior_Lead_Reviewer}}
 Jira: {{Jira_link}}
 
 {{Rest_of_Details}}
@@ -239,9 +264,9 @@ Slack workflow should **display** `{{Jira_link}}` in the channel message. Do **n
 
 ```text
 Generated: Acme Corporation.sh (14 downloads).
-Prompts: Case, EntityName, CompanyName, User_mail, UserID, CID.
+Prompts: Case, EntityName, CompanyName, User_mail, UserID, CID, Senior Lead Reviewer (1-5).
 Jira: creates AOPS Task after downloads; sends Jira_link in Slack webhook.
-Slack: one workflow POST with Case/EntityName/CompanyName/User_mail/UserID/Rest_of_Details/CID/Jira_link.
+Slack: one workflow POST with Case/EntityName/CompanyName/User_mail/UserID/Rest_of_Details/CID/Jira_link/Senior_Lead_Reviewer.
 Omitted (no links): PRELIM_W2
 
 Before first run:
@@ -337,6 +362,7 @@ Automatic review request from AO Bulk Export download script.
 
 Requester (Slack User_mail): ${User_mail}
 Requester (Slack UserID): ${UserID}
+Senior Lead Reviewer: ${Senior_Lead_Reviewer}
 Case: ${Case}
 CID: ${CID}
 Company: ${CompanyName}
@@ -385,7 +411,7 @@ EOF
 }
 
 build_slack_workflow_payload() {
-    printf '{"Case":"%s","EntityName":"%s","CompanyName":"%s","User_mail":"%s","UserID":"%s","Rest_of_Details":"%s","CID":"%s","Jira_link":"%s"}' \
+    printf '{"Case":"%s","EntityName":"%s","CompanyName":"%s","User_mail":"%s","UserID":"%s","Rest_of_Details":"%s","CID":"%s","Jira_link":"%s","Senior_Lead_Reviewer":"%s"}' \
         "$(json_escape "$Case")" \
         "$(json_escape "$EntityName")" \
         "$(json_escape "$CompanyName")" \
@@ -393,7 +419,8 @@ build_slack_workflow_payload() {
         "$(json_escape "$UserID")" \
         "$(json_escape "$Rest_of_Details")" \
         "$(json_escape "$CID")" \
-        "$(json_escape "$Jira_link")"
+        "$(json_escape "$Jira_link")" \
+        "$(json_escape "$Senior_Lead_Reviewer")"
 }
 
 notify_slack_workflow() {
@@ -447,6 +474,26 @@ while [ -z "${CID:-}" ]; do
     read -r -p "CID: " CID
 done
 
+Senior_Lead_Reviewer=''
+while [ -z "$Senior_Lead_Reviewer" ]; do
+    echo ""
+    echo "Select Senior Lead Reviewer:"
+    echo "  1) Satvik Mishra          <smishra@rippling.com>"
+    echo "  2) Pratisruti Roy         <proy@rippling.com>"
+    echo "  3) Jake Sagadraca         <jsagadraca@rippling.com>"
+    echo "  4) Padmanabh Kshirsagar   <pkshirsagar@rippling.com>"
+    echo "  5) Vee Tamang             <btamang@rippling.com>"
+    read -r -p "Enter option (1-5): " SLR_OPTION
+    case "$SLR_OPTION" in
+        1) Senior_Lead_Reviewer='smishra@rippling.com' ;;
+        2) Senior_Lead_Reviewer='proy@rippling.com' ;;
+        3) Senior_Lead_Reviewer='jsagadraca@rippling.com' ;;
+        4) Senior_Lead_Reviewer='pkshirsagar@rippling.com' ;;
+        5) Senior_Lead_Reviewer='btamang@rippling.com' ;;
+        *) echo -e "${YELLOW}Invalid option. Please enter 1-5.${NC}" ;;
+    esac
+done
+
 echo ""
 echo -e "${BLUE}Case:${NC} $Case"
 echo -e "${BLUE}CompanyName:${NC} $CompanyName"
@@ -454,6 +501,7 @@ echo -e "${BLUE}EntityName:${NC} $EntityName"
 echo -e "${BLUE}User_mail:${NC} $User_mail"
 echo -e "${BLUE}UserID:${NC} $UserID"
 echo -e "${BLUE}CID:${NC} $CID"
+echo -e "${BLUE}Senior_Lead_Reviewer:${NC} $Senior_Lead_Reviewer"
 echo -e "${BLUE}Files to Download:${NC} $TOTAL_FILES"
 echo -e "${BLUE}Download Folder:${NC} $EntityName"
 echo -e "${BLUE}Jira:${NC} auto-create AOPS issue"
@@ -564,9 +612,10 @@ echo -e "${CYAN}==========================================${NC}"
 ### Non-negotiables
 
 - Prompt for `Case`, `EntityName`, `CompanyName`, `User_mail`, `UserID`, `CID` before downloads
+- Prompt Senior Lead Reviewer via options 1-5; set `Senior_Lead_Reviewer` to that person's email
 - After downloads + Jira: ask `Send Slack notification? (yes/no)` — only POST webhook on yes
 - On Slack `no`, do not trigger the webhook
-- When Slack is yes: one workflow POST with **exact** keys from Workflow Builder (including `Jira_link`)
+- When Slack is yes: one workflow POST with **exact** keys from Workflow Builder (including `Jira_link` and `Senior_Lead_Reviewer`)
 - Auto-build `Rest_of_Details` (do not prompt for it)
 - Content-Type must be `application/json`
 - Never send `{"text":"..."}` to this webhook

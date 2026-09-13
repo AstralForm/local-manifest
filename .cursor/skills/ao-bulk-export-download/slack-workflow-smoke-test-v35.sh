@@ -8,6 +8,7 @@ set -e
 # Created by: Arham Dharewa
 #
 # Does NOT download files.
+# Prompts include Senior Lead Reviewer (1-5).
 # Creates Jira (if token set), asks Slack yes/no,
 # POSTs webhook only when Slack = yes.
 ##############################################
@@ -28,6 +29,7 @@ JIRA_EMAIL='adharewa@rippling.com'
 JIRA_API_TOKEN="${JIRA_API_TOKEN:-}"
 JIRA_BASE_URL="${JIRA_BASE_URL:-https://rippling.atlassian.net}"
 Jira_link=''
+Senior_Lead_Reviewer=''
 
 json_escape() {
     local s=$1
@@ -40,7 +42,7 @@ json_escape() {
 }
 
 build_slack_workflow_payload() {
-    printf '{"Case":"%s","EntityName":"%s","CompanyName":"%s","User_mail":"%s","UserID":"%s","Rest_of_Details":"%s","CID":"%s","Jira_link":"%s"}' \
+    printf '{"Case":"%s","EntityName":"%s","CompanyName":"%s","User_mail":"%s","UserID":"%s","Rest_of_Details":"%s","CID":"%s","Jira_link":"%s","Senior_Lead_Reviewer":"%s"}' \
         "$(json_escape "$Case")" \
         "$(json_escape "$EntityName")" \
         "$(json_escape "$CompanyName")" \
@@ -48,7 +50,8 @@ build_slack_workflow_payload() {
         "$(json_escape "$UserID")" \
         "$(json_escape "$Rest_of_Details")" \
         "$(json_escape "$CID")" \
-        "$(json_escape "$Jira_link")"
+        "$(json_escape "$Jira_link")" \
+        "$(json_escape "$Senior_Lead_Reviewer")"
 }
 
 echo -e "${CYAN}==========================================${NC}"
@@ -62,6 +65,25 @@ while [ -z "${EntityName:-}" ]; do read -r -p "EntityName [Smoke Entity]: " e; E
 while [ -z "${User_mail:-}" ]; do read -r -p "User_mail: " User_mail; done
 while [ -z "${UserID:-}" ]; do read -r -p "UserID: " UserID; done
 while [ -z "${CID:-}" ]; do read -r -p "CID: " CID; done
+
+while [ -z "$Senior_Lead_Reviewer" ]; do
+    echo ""
+    echo "Select Senior Lead Reviewer:"
+    echo "  1) Satvik Mishra          <smishra@rippling.com>"
+    echo "  2) Pratisruti Roy         <proy@rippling.com>"
+    echo "  3) Jake Sagadraca         <jsagadraca@rippling.com>"
+    echo "  4) Padmanabh Kshirsagar   <pkshirsagar@rippling.com>"
+    echo "  5) Vee Tamang             <btamang@rippling.com>"
+    read -r -p "Enter option (1-5): " SLR_OPTION
+    case "$SLR_OPTION" in
+        1) Senior_Lead_Reviewer='smishra@rippling.com' ;;
+        2) Senior_Lead_Reviewer='proy@rippling.com' ;;
+        3) Senior_Lead_Reviewer='jsagadraca@rippling.com' ;;
+        4) Senior_Lead_Reviewer='pkshirsagar@rippling.com' ;;
+        5) Senior_Lead_Reviewer='btamang@rippling.com' ;;
+        *) echo -e "${YELLOW}Invalid option. Please enter 1-5.${NC}" ;;
+    esac
+done
 
 if [ "$FAILED" -gt 0 ]; then
     TITLE_LINE='AO Bulk Export - Workflow Triggered ⚠️'
@@ -94,6 +116,7 @@ Smoke test issue from AO Bulk Export script.
 
 Requester (Slack User_mail): ${User_mail}
 Requester (Slack UserID): ${UserID}
+Senior Lead Reviewer: ${Senior_Lead_Reviewer}
 Case: ${Case}
 CID: ${CID}
 Company: ${CompanyName}
@@ -160,4 +183,6 @@ while true; do
 done
 
 echo ""
-echo -e "${GREEN}Smoke test complete. Jira_link=${Jira_link}${NC}"
+echo -e "${GREEN}Smoke test complete.${NC}"
+echo -e "${BLUE}Senior_Lead_Reviewer:${NC} $Senior_Lead_Reviewer"
+echo -e "${BLUE}Jira_link:${NC} $Jira_link"
