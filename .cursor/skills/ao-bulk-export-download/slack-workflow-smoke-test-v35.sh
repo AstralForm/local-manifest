@@ -18,10 +18,10 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-SUCCESS=1
+SUCCESS=6
 SKIPPED=0
-FAILED=0
-TOTAL_FILES=1
+FAILED=1
+TOTAL_FILES=7
 
 SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL:-https://hooks.slack.com/triggers/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}"
 
@@ -69,12 +69,14 @@ Run details:
 - User_mail: ${User_mail}
 - UserID: ${UserID}
 
-Download results:
-- Successful: ${SUCCESS}
-- Skipped: ${SKIPPED}
-- Failed: ${FAILED}
-- Files attempted: ${TOTAL_FILES}
-- Download folder: ${EntityName}
+━━━━━━━━━━━━━━━━━━━━
+📊 RESULTS
+━━━━━━━━━━━━━━━━━━━━
+🟢 Successful:       ${SUCCESS}
+🟡 Skipped:          ${SKIPPED}
+🔴 Failed:           ${FAILED}
+📁 Files attempted:  ${TOTAL_FILES}
+📂 Download folder:  ${EntityName}
 EOF
 )
 

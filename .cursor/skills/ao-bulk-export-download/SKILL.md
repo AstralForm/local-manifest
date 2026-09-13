@@ -133,7 +133,9 @@ After downloads finish (counters final), POST **exactly one** request to the Sla
 
 ### `Rest_of_Details` format (Unicode plain text)
 
-Include run identity + results so Slack still looks correct even if the workflow message step only inserts `Rest_of_Details`:
+Include run identity + results so Slack still looks correct even if the workflow message step only inserts `Rest_of_Details`.
+
+Use Unicode emoji (not `:shortcodes:`) so Workflow Builder renders them instead of showing raw `:bar_chart:` text.
 
 ```text
 AO Bulk Export - Workflow Triggered ✅
@@ -146,18 +148,20 @@ Run details:
 - User_mail: <User_mail>
 - UserID: <UserID>
 
-Download results:
-- Successful: <n>
-- Skipped: <n>
-- Failed: <n>
-- Files attempted: <TOTAL_FILES>
-- Download folder: <EntityName>
+━━━━━━━━━━━━━━━━━━━━
+📊 RESULTS
+━━━━━━━━━━━━━━━━━━━━
+🟢 Successful:       <n>
+🟡 Skipped:          <n>
+🔴 Failed:           <n>
+📁 Files attempted:  <TOTAL_FILES>
+📂 Download folder:  <EntityName>
 ```
 
 If `Failed` > 0, use ⚠️ in the first line and append:
 
 ```text
-Action needed: one or more downloads failed — re-check before upload.
+⚠️ Action needed: one or more downloads failed — re-check before upload.
 ```
 
 ### Slack Workflow Builder message (required fix)
@@ -419,12 +423,14 @@ Run details:
 - User_mail: ${User_mail}
 - UserID: ${UserID}
 
-Download results:
-- Successful: ${SUCCESS}
-- Skipped: ${SKIPPED}
-- Failed: ${FAILED}
-- Files attempted: ${TOTAL_FILES}
-- Download folder: ${EntityName}
+━━━━━━━━━━━━━━━━━━━━
+📊 RESULTS
+━━━━━━━━━━━━━━━━━━━━
+🟢 Successful:       ${SUCCESS}
+🟡 Skipped:          ${SKIPPED}
+🔴 Failed:           ${FAILED}
+📁 Files attempted:  ${TOTAL_FILES}
+📂 Download folder:  ${EntityName}
 ${ACTION_LINE:+
 ${ACTION_LINE}}
 EOF
