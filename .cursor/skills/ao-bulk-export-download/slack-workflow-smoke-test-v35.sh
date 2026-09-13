@@ -86,16 +86,12 @@ while [ -z "$Senior_Lead_Reviewer" ]; do
 done
 
 if [ "$FAILED" -gt 0 ]; then
-    TITLE_LINE='AO Bulk Export - Workflow Triggered ⚠️'
     ACTION_LINE='⚠️ Action needed: one or more downloads failed — re-check before upload.'
 else
-    TITLE_LINE='AO Bulk Export - Workflow Triggered ✅'
     ACTION_LINE=''
 fi
 
 Rest_of_Details=$(cat <<EOF
-${TITLE_LINE}
-
 ━━━━━━━━━━━━━━━━━━━━
 📊 RESULTS
 ━━━━━━━━━━━━━━━━━━━━

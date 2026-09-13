@@ -178,8 +178,6 @@ Do **not** repeat Case / Company / Entity / CID / User_mail / UserID here — th
 Use Unicode emoji (not `:shortcodes:`) so Workflow Builder renders them.
 
 ```text
-AO Bulk Export - Workflow Triggered ✅
-
 ━━━━━━━━━━━━━━━━━━━━
 📊 RESULTS
 ━━━━━━━━━━━━━━━━━━━━
@@ -190,11 +188,13 @@ AO Bulk Export - Workflow Triggered ✅
 📂 Download folder:  <EntityName>
 ```
 
-If `Failed` > 0, use ⚠️ in the first line and append:
+If `Failed` > 0, append:
 
 ```text
 ⚠️ Action needed: one or more downloads failed — re-check before upload.
 ```
+
+Do **not** include a title line like `AO Bulk Export - Workflow Triggered`.
 
 ### Slack Workflow Builder message (required fix)
 
