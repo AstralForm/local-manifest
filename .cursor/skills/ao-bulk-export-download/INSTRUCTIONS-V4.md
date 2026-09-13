@@ -1,15 +1,3 @@
----
-name: ao-bulk-export-download
-description: >-
-  Generate a macOS-ready Bash download script from Rippling Bulk Export (or similar)
-  raw text dumps containing an entity name, document labels (PAYSTUB, HUB, PRELIM_W2, W2),
-  download URLs, or "No links found". At run time the script asks for Case, EntityName,
-  CompanyName, User_mail, UserID, CID, and Senior Lead Reviewer; after downloads it creates a Jira AOPS issue
-  using embedded scoped token + cloud ID (no prompts for those), then optionally POSTs one Slack
-  workflow webhook including Jira_link. Use whenever the user pastes such export text or asks for AO bulk
-  export download script generation (V4).
----
-
 # AO bulk export download script generator V4
 
 ## Activation and initial response
