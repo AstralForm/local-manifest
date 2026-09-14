@@ -9,7 +9,7 @@ set -e
 #
 # Does NOT download files.
 # Prompts include Senior Lead Reviewer (1-5).
-# Creates Jira (token: env → Keychain → V4 default),
+# Creates Jira only if operator answers yes (token: env → Keychain → V4 default),
 # asks Slack yes/no, POSTs webhook only when Slack = yes.
 ##############################################
 
@@ -112,9 +112,14 @@ ${ACTION_LINE}}
 EOF
 )
 
-if [ -n "$JIRA_API_TOKEN" ]; then
-    summary="AO Bulk Export Review — ${CompanyName} / ${EntityName} (${Case})"
-    description=$(cat <<EOF
+CREATE_JIRA=''
+while true; do
+    read -r -p "Create Jira issue? (yes/no): " CREATE_JIRA
+    case "$(printf '%s' "$CREATE_JIRA" | tr '[:upper:]' '[:lower:]')" in
+        yes|y)
+            if [ -n "$JIRA_API_TOKEN" ]; then
+                summary="AO Bulk Export Review — ${CompanyName} / ${EntityName} (${Case})"
+                description=$(cat <<EOF
 Smoke test issue from AO Bulk Export script.
 
 Requester (Slack User_mail): ${User_mail}
@@ -126,29 +131,41 @@ Company: ${CompanyName}
 Entity: ${EntityName}
 EOF
 )
-    payload=$(printf '{"fields":{"project":{"key":"AOPS"},"summary":"%s","issuetype":{"name":"Task"},"labels":["ao-bulk-export","review-request"],"description":"%s"}}' \
-        "$(json_escape "$summary")" "$(json_escape "$description")")
-    echo -e "${BLUE}Creating Jira issue in AOPS...${NC}"
-    response="$(curl -sS -w $'\n%{http_code}' -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
-        -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' \
-        --data-binary "$payload" "${JIRA_API_BASE}/rest/api/2/issue" 2>&1)" || true
-    http_code="$(printf '%s\n' "$response" | tail -n 1)"
-    body="$(printf '%s\n' "$response" | sed '$d')"
-    echo -e "${BLUE}Jira HTTP ${http_code}${NC}"
-    if [ "$http_code" = "201" ] || [ "$http_code" = "200" ]; then
-        key="$(printf '%s' "$body" | sed -n 's/.*"key"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
-        Jira_link="${JIRA_SITE_URL}/browse/${key}"
-        echo -e "${GREEN}Jira created: ${key}${NC}"
-        echo -e "${BLUE}${Jira_link}${NC}"
-    else
-        Jira_link='n/a'
-        echo -e "${YELLOW}Jira create failed; Jira_link=n/a${NC}"
-        echo "$body"
-    fi
-else
-    Jira_link='n/a'
-    echo -e "${YELLOW}No Jira API token available — Jira_link=n/a${NC}"
-fi
+                payload=$(printf '{"fields":{"project":{"key":"AOPS"},"summary":"%s","issuetype":{"name":"Task"},"labels":["ao-bulk-export","review-request"],"description":"%s"}}' \
+                    "$(json_escape "$summary")" "$(json_escape "$description")")
+                echo -e "${BLUE}Creating Jira issue in AOPS...${NC}"
+                response="$(curl -sS -w $'\n%{http_code}' -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
+                    -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' \
+                    --data-binary "$payload" "${JIRA_API_BASE}/rest/api/2/issue" 2>&1)" || true
+                http_code="$(printf '%s\n' "$response" | tail -n 1)"
+                body="$(printf '%s\n' "$response" | sed '$d')"
+                echo -e "${BLUE}Jira HTTP ${http_code}${NC}"
+                if [ "$http_code" = "201" ] || [ "$http_code" = "200" ]; then
+                    key="$(printf '%s' "$body" | sed -n 's/.*"key"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
+                    Jira_link="${JIRA_SITE_URL}/browse/${key}"
+                    echo -e "${GREEN}Jira created: ${key}${NC}"
+                    echo -e "${BLUE}${Jira_link}${NC}"
+                else
+                    Jira_link='n/a'
+                    echo -e "${YELLOW}Jira create failed; Jira_link=n/a${NC}"
+                    echo "$body"
+                fi
+            else
+                Jira_link='n/a'
+                echo -e "${YELLOW}No Jira API token available — Jira_link=n/a${NC}"
+            fi
+            break
+            ;;
+        no|n)
+            Jira_link='n/a'
+            echo -e "${YELLOW}Jira skipped by operator.${NC}"
+            break
+            ;;
+        *)
+            echo -e "${YELLOW}Please answer yes or no.${NC}"
+            ;;
+    esac
+done
 
 SEND_SLACK=''
 while true; do

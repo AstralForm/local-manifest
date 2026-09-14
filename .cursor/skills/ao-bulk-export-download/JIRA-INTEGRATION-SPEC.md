@@ -4,9 +4,10 @@
 
 ```text
 Bash download script
-    → create Jira issue in AOPS (scoped token via api.atlassian.com gateway)
-    → set Jira_link = site browse URL
-    → ask Send Slack? (yes/no)
+    → ask Create Jira issue? (yes/no)
+        → if yes: create AOPS Task (scoped token via api.atlassian.com gateway)
+        → set Jira_link = site browse URL (or n/a if no/fail)
+    → ask Send Slack notification? (yes/no)
         → if yes: POST Slack workflow webhook (9 variables; URL embedded)
 ```
 
@@ -20,6 +21,15 @@ Bash download script
 | `JIRA_SITE_URL` | `https://rippling.atlassian.net` |
 | Token scopes | `read:jira-work` + `write:jira-work` |
 | Slack webhook | `https://hooks.slack.com/triggers/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` |
+
+## Runtime confirmations
+
+```text
+Create Jira issue? (yes/no):
+Send Slack notification? (yes/no):
+```
+
+Both are independent. Skipping Jira sets `Jira_link=n/a` and still allows Slack.
 
 ## Slack webhook schema (exact)
 
