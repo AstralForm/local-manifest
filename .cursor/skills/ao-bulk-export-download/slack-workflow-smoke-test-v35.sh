@@ -27,7 +27,7 @@ TOTAL_FILES=7
 SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL:-https://hooks.slack.com/triggers/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}"
 JIRA_EMAIL='adharewa@rippling.com'
 # Scopes: classic read:jira-work + write:jira-work
-JIRA_API_TOKEN_DEFAULT='ATATT3xFfGF0uREu47ts2Jr-Quz-ygsQ0W-QuuX3pDoqxjezfupGdS-pMfm-91oEPZJrbrysTMZG3iBHPKak_zbbwZhAZFwCh3rug-hNSH--puX3rzSzSGpRGcqXjDcJghxQXh9pxfwQgKxTBfR4252aVkO_5-IJQgJSWi3Vzz7dBHIrqH9sjus=5B77062D'
+JIRA_API_TOKEN_DEFAULT='ATATT3xFfGF0O1r-Zm72VpJ1csXd77NlAb_x_QMgjSw3cnzP8lL0yynFdDijJa0rLUurep4lGGeUQyrfCgOvnbiRJmiu7O4S4wwlbXGF96p4l6WMp0uyQw92jBIf5JCYLmwfC9vmZZjGh6dBd_WkFps6hnoyCsp9LAIaQXsWJE-9dC3JZJm8v_g=AD1ABE02'
 if [ -z "${JIRA_API_TOKEN:-}" ]; then
     JIRA_API_TOKEN="$(security find-generic-password -a 'adharewa@rippling.com' -s 'ao-bulk-export-jira-api-token' -w 2>/dev/null || true)"
 fi
