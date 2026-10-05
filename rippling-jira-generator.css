@@ -73,6 +73,43 @@ body {
     font-size: var(--sub);
 }
 
+.how-to {
+    margin-top: 14px;
+    max-width: 72ch;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 12px;
+}
+
+.how-to summary {
+    cursor: pointer;
+    font-weight: 650;
+    font-size: var(--sub);
+    color: var(--ink);
+}
+
+.how-to-body {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: var(--body);
+}
+
+.how-to-body p {
+    margin: 0 0 8px;
+}
+
+.how-to-body p:last-child {
+    margin-bottom: 4px;
+}
+
+.how-to-body code {
+    font-size: 12px;
+    background: #f1f5f9;
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
 .workspace {
     display: grid;
     grid-template-columns: 1fr;

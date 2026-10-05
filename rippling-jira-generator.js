@@ -171,8 +171,8 @@ function bexcAccountFields(troubleshootingHint) {
 const BOARDS = [
     {
         id: 'rippling-standard',
-        name: 'Rippling Standard template',
-        help: 'Use this standard Rippling Jira format for product/engineering issues. Complete the troubleshooting checklist and include any product-specific ENG details required for the board you are filing in.',
+        name: 'Rippling Standard template (use if no board template)',
+        help: 'Use this when the destination Jira board does not have a set template. Complete the standard intake, troubleshooting checklist, and any product-specific ENG details.',
         titleHint: 'Client Name | Brief description of issue',
         titlePlaceholder: 'Example: Acme Corp | Paystub PDF fails to generate for terminated EEs',
         fields: [
@@ -507,7 +507,7 @@ const BOARDS = [
         id: 'aops-one-time-charge',
         name: 'AOPS - One-Time Charge',
         aops: true,
-        help: 'File on the AOPS board for a one-time customer charge. Include AM approval (Slack thread or screenshot) and the charge amount category.',
+        help: 'File on the AOPS board for a one-time customer charge. Include AM approval (Slack thread or screenshot) and the charge amount.',
         titleHint: 'Client Name | Brief description of issue // For reference or Not For reference',
         titlePlaceholder: 'Example: Acme Corp | Back-bill missed platform fee',
         fields: aopsTitleFields('Example: Acme Corp | Back-bill missed platform fee').concat([
@@ -518,7 +518,13 @@ const BOARDS = [
                 hint: 'Please clarify why we need to issue a charge to the customer and what occurred that led to the charge being processed.',
                 rows: 6
             })
-        ]).concat(bexcAccountFields('Share the steps taken so far and confirm whether you have received approval from the AM or the relevant team to issue the charge. Attach the Slack thread confirmation or a screenshot of the AM\'s approval.')).concat(amountCategoryFields('chargeAmount', 'Charge Amount', 'Please mention the amount that needs to be charged.')).concat([
+        ]).concat(bexcAccountFields('Share the steps taken so far and confirm whether you have received approval from the AM or the relevant team to issue the charge. Attach the Slack thread confirmation or a screenshot of the AM\'s approval.')).concat([
+            text('chargeAmount', 'Charge Amount', {
+                section: '4. Amount',
+                compileSection: '4. Amount',
+                hint: 'Please mention the amount that needs to be charged.',
+                placeholder: 'Example: $2,500'
+            }),
             area('whyDebitedAndWaiving', 'Why are we charging them?', {
                 section: '5. Action Required',
                 compileSection: '5. Action Required',
@@ -1117,8 +1123,7 @@ function syncConditionals(board) {
 
 function syncWaiverCategory() {
     const amountInput = document.getElementById('waiverAmount')
-        || document.getElementById('refundAmount')
-        || document.getElementById('chargeAmount');
+        || document.getElementById('refundAmount');
     const categoryInput = document.getElementById('amountCategory');
     const approversInput = document.getElementById('requiredApprovers');
     if (!amountInput || !categoryInput || !approversInput) return;
@@ -1173,7 +1178,7 @@ function bindBoardEvents(board) {
         const handler = function () {
             savedValues[field.id] = input.type === 'checkbox' ? (input.checked ? 'Yes' : 'No') : input.value;
             if (field.id === 'confirmation') checkConfirmationStatus();
-                    if (field.id === 'waiverAmount' || field.id === 'refundAmount' || field.id === 'chargeAmount') syncWaiverCategory();
+                    if (field.id === 'waiverAmount' || field.id === 'refundAmount') syncWaiverCategory();
             if (field.id === 'amountCategory') syncApproversFromCategory();
             if (field.id === 'engExpectedOutcome') syncEngSentence();
             syncConditionals(board);
@@ -1204,8 +1209,8 @@ function renderBoard(boardId) {
         actions.style.display = 'none';
         output.style.display = 'none';
         if (workspace) workspace.classList.remove('has-preview');
-        help.textContent = 'Select a board to load the matching Jira format.';
-        document.title = 'Rippling Jira Generator';
+        help.textContent = 'Select a board with a set template. If the destination board does not have one, use Rippling Standard template.';
+        document.title = 'Account Operation JIRA generator';
         return;
     }
 
@@ -1215,7 +1220,7 @@ function renderBoard(boardId) {
     if (workspace) workspace.classList.add('has-preview');
     savedValues.confirmation = 'No';
     help.textContent = board.help;
-    document.title = 'Rippling Jira Generator — ' + board.name;
+    document.title = 'Account Operation JIRA generator — ' + board.name;
 
     const titleField = board.fields.find(function (field) { return field.id === 'jiraTitle'; });
     if (titleField) {

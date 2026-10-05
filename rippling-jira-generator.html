@@ -3,18 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rippling Jira Generator</title>
+    <title>Account Operation JIRA generator</title>
     <link rel="stylesheet" href="rippling-jira-generator.css">
 
 </head>
 <body>
     <div class="app-shell">
         <header class="hero">
-            <span class="hero-badge">Rippling ops</span>
-            <h1 class="page-title">Jira Generator</h1>
+            <span class="hero-badge">Account Operation</span>
+            <h1 class="page-title">Account Operation JIRA generator</h1>
             <p class="page-subtitle">
-                Pick a board, complete the intake, then preview the ticket on the right before copying it into Jira.
+                Pick a board with a set template, or use Rippling Standard if the board does not have one. Preview the ticket on the right before copying it into Jira.
             </p>
+            <details class="how-to">
+                <summary>How to use this generator</summary>
+                <div class="how-to-body">
+                    <p>Choose the Jira board that matches the work. If that board does not have a set template, use <strong>Rippling Standard template</strong>. Fill the intake, set confirmation to Yes, then Copy for Jira and paste with Command+V / Ctrl+V (not Shift+Command+V).</p>
+                    <p>AOPS titles: <code>Client Name | Brief description // For reference or Not For reference</code>. Amount Category and Required Approvers apply to Invoice Waiver and One-Time Refund only — not One-Time Charge (enter Charge Amount only).</p>
+                </div>
+            </details>
         </header>
 
         <div class="workspace" id="workspace">
@@ -22,16 +29,16 @@
                 <div class="board-picker">
                     <label for="boardSelect" class="gp-label">Jira board / ticket type
                         <div class="tooltip">ⓘ
-                            <span class="tooltiptext">Pick the board you will file in. Each option loads a different field layout and output template.</span>
+                            <span class="tooltiptext">Pick the board you will file in. Each option loads a different field layout. If the board has no set template, choose Rippling Standard template.</span>
                         </div>
                     </label>
                     <select id="boardSelect" class="gp-input"></select>
-                    <p class="board-help" id="boardHelp">Select a board to load the matching Jira format.</p>
+                    <p class="board-help" id="boardHelp">Select a board with a set template. If the destination board does not have one, use Rippling Standard template.</p>
                 </div>
 
                 <div id="emptyState">
                     <strong>No template selected</strong>
-                    <p class="empty-lead">Choose a Jira board above to load the matching intake and live preview.</p>
+                    <p class="empty-lead">Choose the matching Jira board above. If that board does not have a set template, choose <strong>Rippling Standard template</strong>.</p>
                     <div class="sla-block">
                         <h2>SLAs vs Priority</h2>
                         <p>There are SLAs implemented on each customer task created in engineering Jira boards. These SLAs vary by priority assigned to the Jira ticket.</p>
