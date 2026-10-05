@@ -1,0 +1,1537 @@
+const GP_CALC_URL = 'https://grid-rippling.enterprise.slack.com/archives/C0B08AKC1KM';
+
+function text(id, label, extra) {
+    return Object.assign({ id: id, label: label, type: 'text' }, extra || {});
+}
+
+function area(id, label, extra) {
+    return Object.assign({ id: id, label: label, type: 'textarea', rows: 6 }, extra || {});
+}
+
+function selectField(id, label, options, extra) {
+    return Object.assign({ id: id, label: label, type: 'select', options: options }, extra || {});
+}
+
+function customerSection(opts) {
+    opts = opts || {};
+    const includeName = opts.includeCompanyName !== false;
+    const includeSegment = !!opts.includeSegment;
+    const includeOwner = !!opts.includeOwner;
+    const fields = [];
+
+    if (includeName) {
+        fields.push(text('companyName', 'a. Company name', {
+            section: '2. Account Details',
+            compileSection: '2. Account Details',
+            tooltip: 'Legal or display name of the customer company.'
+        }));
+        fields.push(text('companyID', 'b. Company ID', { tooltip: 'The unique identifier for the company.' }));
+        fields.push(text('entityName', 'c. Entity Name', { tooltip: 'The legal entity name of the company.' }));
+        fields.push(text('country', 'd. Country', { tooltip: 'The country where the issue is occurring.' }));
+        fields.push(text('arr', 'e. ARR', { tooltip: 'Annual Recurring Revenue for the client.' }));
+        if (includeSegment) {
+            fields.push(selectField('segment', 'f. Segment / tier', ['', 'SMB', 'Mid-Market', 'Enterprise', 'Strategic'], {
+                tooltip: 'Customer segment such as SMB, Mid-Market, or Enterprise.'
+            }));
+            fields.push(text('accountOwner', 'g. CSM / AM / account owner', { tooltip: 'Who owns the customer relationship.' }));
+            fields.push(selectField('escalated', 'h. Escalated Client', ['No', 'Yes'], {
+                defaultValue: 'No',
+                tooltip: 'Is this client flagged as escalated?'
+            }));
+        } else {
+            fields.push(selectField('escalated', 'f. Escalated Client', ['No', 'Yes'], {
+                defaultValue: 'No',
+                tooltip: 'Is this client flagged as escalated?'
+            }));
+        }
+    } else {
+        fields.push(text('companyID', 'a. Company ID', {
+            section: '2. Account Details',
+            compileSection: '2. Account Details',
+            tooltip: 'The unique identifier for the company.'
+        }));
+        fields.push(text('country', 'b. Country', { tooltip: 'The country where the issue is occurring.' }));
+        fields.push(text('arr', 'c. ARR', { tooltip: 'Annual Recurring Revenue for the client.' }));
+        fields.push(text('entityName', 'd. Entity Name', { tooltip: 'The legal entity name of the company.' }));
+        fields.push(selectField('escalated', 'e. Escalated Client', ['No', 'Yes'], {
+            defaultValue: 'No',
+            tooltip: 'Is this client flagged as escalated?'
+        }));
+    }
+
+    fields.push(area('escalatedReason', 'Why is this escalated?', {
+        conditional: true,
+        dependencyId: 'escalated',
+        dependencyValue: 'Yes',
+        isSubField: true
+    }));
+    return fields;
+}
+
+const AMOUNT_CATEGORIES = [
+    { label: 'Under $1,000', approvers: 'No approver needed', min: 0, max: 1000 },
+    { label: '$1,000 – $5,000', approvers: "Requester's Manager", min: 1000, max: 5000 },
+    { label: '$5,000 – $10,000', approvers: "Requester's Manager + Director", min: 5000, max: 10000 },
+    { label: '$10,000 – $50,000', approvers: "Requester's Manager + Director + VP", min: 10000, max: 50000 },
+    { label: '$50,000+', approvers: "Requester's Manager + Director + VP + Vipin Sethi (Accounting)", min: 50000, max: Infinity }
+];
+
+function categoryForAmount(amount) {
+    for (let i = 0; i < AMOUNT_CATEGORIES.length; i++) {
+        const band = AMOUNT_CATEGORIES[i];
+        if (amount >= band.min && amount < band.max) return band;
+    }
+    return AMOUNT_CATEGORIES[AMOUNT_CATEGORIES.length - 1];
+}
+
+function parseAmount(raw) {
+    const cleaned = String(raw || '').replace(/[^0-9.]/g, '');
+    if (!cleaned) return null;
+    const value = parseFloat(cleaned);
+    return isNaN(value) ? null : value;
+}
+
+function checkbox(id, label, extra) {
+    return Object.assign({ id: id, label: label, type: 'checkbox', compileStyle: 'checklist' }, extra || {});
+}
+
+function checkboxes(id, label, options, extra) {
+    return Object.assign({ id: id, label: label, type: 'checkboxes', options: options, compileStyle: 'checklist' }, extra || {});
+}
+
+function aopsTitleFields(placeholder) {
+    return [
+        area('jiraTitle', 'Jira Title', {
+            rows: 2,
+            section: 'Jira Title',
+            hint: 'Client Name | Brief description of issue // For reference or Not For reference',
+            placeholder: placeholder || 'Example: Acme Corp | Brief description of issue'
+        }),
+        selectField('referenceFlag', 'For reference or Not For reference', ['For reference', 'Not For reference'], {
+            defaultValue: 'For reference',
+            skipCompile: true,
+            tooltip: 'This suffix is added to the Jira title for every AOPS ticket.'
+        })
+    ];
+}
+
+function amountCategoryFields(amountId, amountLabel, amountHint) {
+    return [
+        text(amountId, amountLabel, {
+            section: '4. Amount',
+            compileSection: '4. Amount',
+            hint: amountHint,
+            placeholder: 'Example: $2,500'
+        }),
+        {
+            id: 'amountCategoryTable',
+            type: 'html',
+            skipCompile: true,
+            section: 'Amount Category',
+            html: '<div class="html-block"><p class="hint">Required approvers are filled from the amount using this matrix.</p><table class="amount-table"><thead><tr><th>Amount</th><th>Required Approvers</th></tr></thead><tbody><tr><td>Under $1,000</td><td>No approver needed</td></tr><tr><td>$1,000 – $5,000</td><td>Requester\'s Manager</td></tr><tr><td>$5,000 – $10,000</td><td>Requester\'s Manager + Director</td></tr><tr><td>$10,000 – $50,000</td><td>Requester\'s Manager + Director + VP</td></tr><tr><td>$50,000+</td><td>Requester\'s Manager + Director + VP + Vipin Sethi (Accounting)</td></tr></tbody></table></div>'
+        },
+        selectField('amountCategory', 'Amount Category', AMOUNT_CATEGORIES.map(function (band) { return band.label; }), {
+            hideLabel: true
+        }),
+        text('requiredApprovers', 'Required Approvers', {
+            defaultValue: '',
+            readOnly: true,
+            tooltip: 'Auto-filled from the amount / amount category.'
+        })
+    ];
+}
+
+function bexcAccountFields(troubleshootingHint) {
+    return [
+        text('companyID', 'CID', {
+            section: '2. Account Details',
+            compileSection: '2. Account Details',
+            compileLabel: 'CID',
+            tooltip: 'The unique identifier for the company.'
+        }),
+        text('arr', 'ARR', { tooltip: 'Annual Recurring Revenue for the client.' }),
+        text('entityName', 'Entity Name', { tooltip: 'The legal entity name of the company.' }),
+        selectField('escalated', 'Escalated Client', ['No', 'Yes'], {
+            defaultValue: 'No',
+            tooltip: 'Is this client flagged as escalated?'
+        }),
+        selectField('peoCustomer', 'PEO Customer', ['No', 'Yes'], {
+            defaultValue: 'No',
+            tooltip: 'Is this a PEO customer?'
+        }),
+        area('troubleshooting', 'Troubleshooting actions taken so far', {
+            section: '3. Troubleshooting Actions Taken So Far',
+            compileSection: '3. Troubleshooting Actions Taken So Far',
+            compileLabel: 'Context',
+            hint: troubleshootingHint
+        })
+    ];
+}
+
+const BOARDS = [
+    {
+        id: 'rippling-standard',
+        name: 'Rippling Standard template (use if no board template)',
+        help: 'Use this when the destination Jira board does not have a set template. Complete the standard intake, troubleshooting checklist, and any product-specific ENG details.',
+        titleHint: 'Client Name | Brief description of issue',
+        titlePlaceholder: 'Example: Acme Corp | Paystub PDF fails to generate for terminated EEs',
+        fields: [
+            area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
+            area('whatIsHappening', 'What is happening', {
+                section: '1. Issue Description',
+                compileSection: '1. Issue Description',
+                compileLabel: 'What is happening',
+                hint: 'Observable system (error messages, incorrect output, unexpected system behavior)',
+                placeholder: 'Example: Error toast “Unable to generate document” when opening the latest paystub.'
+            }),
+            area('whenItHappens', 'When the issue occurs', {
+                compileLabel: 'When the issue occurs',
+                hint: 'Trigger conditions (what specific app/payroll run/employee is impacted and what actions are triggering the system behavior)',
+                placeholder: 'Example: UK Default Pay Schedule, Aug 2025 run, EE Jane Doe after clicking Download paystub.'
+            }),
+            area('whatShouldHappen', 'Expected outcome', {
+                compileLabel: 'Expected outcome',
+                hint: 'Correct system behavior (what should be happening and how you are able to confirm this via demo account, playbooks, HC articles etc.)',
+                placeholder: 'Example: Paystub PDF should download. Confirmed on demo and in the Paystubs HC article.'
+            }),
+            text('companyID', 'CID', {
+                section: '2. Account Details',
+                compileSection: '2. Account Details',
+                compileLabel: 'CID',
+                tooltip: 'The unique identifier for the company.'
+            }),
+            text('accountName', 'Account Name', { compileLabel: 'Account Name' }),
+            text('arr', 'ARR', { tooltip: 'Annual Recurring Revenue for the client.' }),
+            text('caseNumber', 'Case', { compileLabel: 'Case' }),
+            text('country', 'Country the run belongs to'),
+            text('entityName', 'Entity Name'),
+            area('affectedPeople', 'Name & Role IDs of affected employee(s) / admin(s), if applicable', {
+                rows: 4,
+                placeholder: 'Example:\nJane Doe | 68c83622189b9c09f943f2b3\nAdmin Sam Lee | 68c83622189b9c09f943f2b1'
+            }),
+            selectField('eeOrContractor', 'Is this an Employee/Contractor?', ['', 'Employee', 'Contractor', 'Admin', 'Both / multiple', 'n/a']),
+            area('payrunLink', 'Link to payrun with payrun ID and Check Date of Run', {
+                rows: 3,
+                placeholder: 'Example: https://... | Pay run ID 69139a432589dcba714f7c11 | Check date 31 Aug 2025'
+            }),
+            selectField('escalated', 'Escalated client', ['No', 'Yes'], { defaultValue: 'No' }),
+            selectField('peoCustomer', 'PEO Customer', ['No', 'Yes'], { defaultValue: 'No' }),
+            {
+                id: 'troubleshootingIntro',
+                type: 'html',
+                skipCompile: true,
+                section: '3. Troubleshooting Actions Taken So Far',
+                html: '<p class="hint">Outline the actions you have already taken to troubleshoot the issue during your pre check. Complete each applicable checkbox and the follow-up fields.</p>'
+            },
+            checkbox('tsLogrocket', 'LogRocket reviewed', {
+                compileSection: '3. Troubleshooting Actions Taken So Far'
+            }),
+            text('logrocketLink', 'LogRocket link attached with support screenshots', {
+                conditional: true,
+                dependencyId: 'tsLogrocket',
+                dependencyValue: 'Yes',
+                isSubField: true
+            }),
+            text('logrocketTime', 'Confirm the time to review on the LogRocket recording', {
+                conditional: true,
+                dependencyId: 'tsLogrocket',
+                dependencyValue: 'Yes',
+                isSubField: true,
+                placeholder: 'Example: 1:12–1:40'
+            }),
+            checkbox('tsDebugger', 'Debugger reviewed'),
+            selectField('employeeDebugger', 'Employee debugger', ['', 'Yes', 'No', 'n/a'], {
+                conditional: true,
+                dependencyId: 'tsDebugger',
+                dependencyValue: 'Yes',
+                isSubField: true
+            }),
+            selectField('companyDebugger', 'Company debugger', ['', 'Yes', 'No', 'n/a'], {
+                conditional: true,
+                dependencyId: 'tsDebugger',
+                dependencyValue: 'Yes',
+                isSubField: true
+            }),
+            area('debuggerFindings', 'Key findings summarized with screenshots to support', {
+                conditional: true,
+                dependencyId: 'tsDebugger',
+                dependencyValue: 'Yes',
+                isSubField: true,
+                rows: 4
+            }),
+            checkbox('tsScreenshots', 'Screenshots captured'),
+            area('screenshotFrontEnd', 'Front End view of Error state / incorrect output', {
+                conditional: true,
+                dependencyId: 'tsScreenshots',
+                dependencyValue: 'Yes',
+                isSubField: true,
+                rows: 4
+            }),
+            area('screenshotFindings', 'Key findings summarized', {
+                conditional: true,
+                dependencyId: 'tsScreenshots',
+                dependencyValue: 'Yes',
+                isSubField: true,
+                rows: 4
+            }),
+            checkbox('tsDemo', 'Tested on Demo Account'),
+            selectField('demoRecreated', 'Were you able to recreate the situation on your demo', ['', 'Yes', 'No'], {
+                conditional: true,
+                dependencyId: 'tsDemo',
+                dependencyValue: 'Yes',
+                isSubField: true
+            }),
+            selectField('companyOrGeneral', 'Confirm if Company specific or General system functionality', ['', 'Company specific', 'General system functionality', 'Unknown'], {
+                conditional: true,
+                dependencyId: 'tsDemo',
+                dependencyValue: 'Yes',
+                isSubField: true
+            }),
+            checkbox('tsPlaybooks', 'Playbooks/Content review'),
+            area('playbookContent', 'Confirm the relevant content used to support your findings', {
+                conditional: true,
+                dependencyId: 'tsPlaybooks',
+                dependencyValue: 'Yes',
+                isSubField: true,
+                rows: 4
+            }),
+            checkbox('tsRiskEval', 'Risk Eval ID'),
+            text('riskEvalId', 'Risk Eval ID', {
+                conditional: true,
+                dependencyId: 'tsRiskEval',
+                dependencyValue: 'Yes',
+                isSubField: true,
+                hint: 'Relevant for Banking expediting requests that Risk team has approved'
+            }),
+            checkboxes('engAskTypes', 'Pick the relevant ask types', [
+                'Fix a bug',
+                'Investigate root cause',
+                'Confirm expected behavior',
+                'Data correction'
+            ], {
+                section: '4. Action Required from Engineering',
+                compileSection: '4. Action Required from Engineering',
+                compileLabel: 'Ask types',
+                hint: 'Select every ask that applies.'
+            }),
+            area('engExpectedOutcome', 'Expected outcome', {
+                rows: 3,
+                hint: 'Used in the required sentence: Engineering is requested to [action] so that [expected outcome].',
+                placeholder: 'Example: paystub PDFs generate for terminated EEs in the impacted run'
+            }),
+            text('engSentence', 'Required sentence', {
+                readOnly: true,
+                tooltip: 'Auto-built from the selected ask types and expected outcome.'
+            }),
+            selectField('officehours', 'Did you take this to OH or speak with a Lead?', ['No', 'Yes'], {
+                defaultValue: 'No'
+            }),
+            text('ohName', 'Who was the Lead who approved the Jira ticket?', {
+                conditional: true,
+                dependencyId: 'officehours',
+                dependencyValue: 'Yes',
+                isSubField: true,
+                skipCompile: true
+            }),
+            text('productArea', 'Product Area', {
+                section: '5. Product-Specific Details',
+                compileSection: '5. Product-Specific Details',
+                compileLabel: 'Product Area',
+                placeholder: 'Example: Billing / Churn Process / Failed Invoice Blocker Override'
+            }),
+            text('reasonCategory', 'Reason Category', {
+                compileLabel: 'Reason Category',
+                placeholder: 'Example: Suspended Churn (90+ Days Past Due)'
+            }),
+            area('productSpecificDetails', 'Additional product details', {
+                hint: 'Some products require extra ENG fields. Add anything else from the product grid here.',
+                rows: 4
+            }),
+            selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                defaultValue: 'No',
+                skipCompile: true
+            })
+        ]
+    },
+    {
+        id: 'global-payroll',
+        name: 'Global Payroll',
+        help: 'Use this format for payroll calculation, pay-run, retro, tax, and GP admin issues. File on the Global Payroll Jira board.',
+        titleHint: 'Client Name | Brief description of issue',
+        titlePlaceholder: 'Example: Client Name | Retro pay calculation incorrect for UK EEs',
+        fields: [
+            area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
+            area('problemDescription', 'a. What is the problem?', {
+                section: '1. Issue Description',
+                compileSection: '1. Issue Description',
+                hint: 'What broke? What was the outcome of the issue?',
+                placeholder: 'Example: 2 UK EEs had incorrect retro pay calculated in June & July 2025 payruns. Admin manually corrected amounts after system under-calculated retro pay. '
+            }),
+            area('observableError', 'b. What is the observable error?', {
+                hint: 'List factual mismatches that can be verified',
+                placeholder: 'Example:\nSalary change (before → after) - 50,000 → 60,000\nEffective date of salary change - 15/11/2025\nExpected retro pay in run X - 500\nActual retro pay in run X - 200'
+            }),
+            area('otherinfo', 'c. Supporting Documentation', {
+                placeholder: 'Example:\nDebugger link, Logrocket link, Screenshots\nshowing:\n>> the change made\n>> actual output'
+            }),
+            area('listEEs', 'd. Impacted EE', {
+                hint: 'Employee Name and Role ID required',
+                compileLabel: 'd. Impacted EEs',
+                placeholder: 'Example:\nFirst Surname | 68c83622189b9c09f943f2b3\nSecond Surname | 68c83622189b9c09f943f2b1'
+            }),
+            area('listPayRuns', 'e. Impacted Pay Runs', {
+                hint: 'Pay Run Name and Pay Run ID required',
+                placeholder: 'Example:\nNov 01 - Nov 30: UK Default Pay Schedule | 69139a432589dcba714f7c11\nDec 01 - Dec 31: UK Default Pay Schedule | 68c83622189b9c09f943f2b1'
+            }),
+            text('approvalDeadline', 'f. Approval Deadline'),
+            text('chequeDate', 'g. Cheque Date'),
+            area('reproSteps', 'h. Steps to reproduce', {
+                placeholder: 'Example:\nUpdate EE salary w/ X effective date\nRun June & July runs\nObserve retro pay output in run'
+            }),
+            area('actionReqEng', 'i. Ask of Engineering', {
+                hint: 'State what engineering must answer.',
+                placeholder: 'Example: explain why actual retro pay calculated did not match expected, given the effective dates of the salary changes.'
+            }),
+            text('fixDate', 'j. Date issue must be fixed by'),
+            area('fixDateReason', 'k. Why must it be fixed by this date?', {
+                rows: 4,
+                placeholder: 'Example: The incorrect taxes need to be fixed by this date as it is the approval date of the pay run and the taxes cannot be overriden by admin.'
+            })
+        ].concat(customerSection({ includeCompanyName: false })).concat([
+            selectField('officehours', 'a. Did you confirm in OH/Lead?', ['No', 'Yes - Jira Advised'], {
+                section: '3. Global Payroll Specific Details',
+                compileSection: '3. Global Payroll Specific Details',
+                defaultValue: 'No',
+                tooltip: 'Did you confirm the necessity of a Jira with an Office Hour session or Team Lead?'
+            }),
+            text('ohName', 'Approving Lead/OH Name', {
+                conditional: true,
+                dependencyId: 'officehours',
+                dependencyValue: 'Yes - Jira Advised',
+                isSubField: true,
+                skipCompile: true
+            }),
+            selectField('workaround', 'b. Is there a workaround?', ['No', 'Yes'], {
+                defaultValue: 'No',
+                tooltip: 'Is there a temporary solution for the client to mitigate the issue?'
+            }),
+            area('workaroundDetails', 'Details of Workaround Provided', {
+                conditional: true,
+                dependencyId: 'workaround',
+                dependencyValue: 'Yes',
+                isSubField: true,
+                placeholder: 'Example: We manually overrode the salary change in the current run and will manually adjust retro in the next run.'
+            }),
+            selectField('calculator', 'c. Did you check the calculation in #gp-calculation-explanation?', ['n/a', 'Yes'], {
+                defaultValue: 'n/a',
+                tooltip: 'Did you verify results using the channel?',
+                labelHtml: 'c. Did you check the calculation in <a href="' + GP_CALC_URL + '" target="_blank" rel="noopener">#gp-calculation-explanation</a>?',
+                compileLabel: 'c. Did you check in #gp-calculation-explanation?'
+            }),
+            text('calculatorSlackLink', 'Slack Link to #gp-calculation-explanation thread', {
+                conditional: true,
+                dependencyId: 'calculator',
+                dependencyValue: 'Yes',
+                isSubField: true,
+                labelHtml: 'Slack Link to <a href="' + GP_CALC_URL + '" target="_blank" rel="noopener">#gp-calculation-explanation</a> thread'
+            }),
+            selectField('confirmation', 'd. Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                defaultValue: 'No',
+                skipCompile: true
+            })
+        ])
+    },
+    {
+        id: 'aops-invoice-waiver',
+        name: 'AOPS - Invoice Waiver',
+        aops: true,
+        help: 'File on the AOPS board. Use this format to request waiving customer invoices, including amount category and required approvers.',
+        titleHint: 'Client Name | Brief description of issue // For reference or Not For reference',
+        titlePlaceholder: 'Example: Acme Corp | Waive duplicate September platform invoice',
+        fields: aopsTitleFields('Example: Acme Corp | Waive duplicate September platform invoice').concat([
+            area('whatIsHappening', 'What is happening', {
+                section: '1. Issue Description',
+                compileSection: '1. Issue Description',
+                compileLabel: 'What is happening',
+                hint: 'Please clarify why we need to waive the invoices for the customer and what occurred that we need to waive these invoices.',
+                placeholder: 'Example: Customer was billed twice for the September platform fee after a contract correction. AM approved waiving the duplicate invoice.'
+            })
+        ]).concat(bexcAccountFields('Share the steps taken so far and confirm whether you have received approval from the AM or the relevant team to waive the invoices. Attach the Slack thread confirmation or a screenshot of the AM\'s approval.')).concat(amountCategoryFields('waiverAmount', 'Waiver amount', 'Please mention the amount that needs to be waived.')).concat([
+            area('whyDebitedAndWaiving', 'Why were the charges initially debited, and why are we waiving them now?', {
+                section: '5. Action Required',
+                compileSection: '5. Action Required',
+                compileIntro: 'This Jira is for reference.',
+                hint: 'This Jira is for reference. Explain why the charges were initially debited and why they are being waived now.'
+            }),
+            area('underlyingIssueSteps', 'How we are fixing the issue (the problem that led to the waiver)', {
+                hint: 'Describe the fix or process change so this does not recur.'
+            }),
+            selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                defaultValue: 'No',
+                skipCompile: true
+            })
+        ])
+    },
+    {
+        id: 'aops-one-time-refund',
+        name: 'AOPS - One-Time Refund',
+        aops: true,
+        help: 'File on the AOPS board for a one-time customer refund. Include AM approval (Slack thread or screenshot) and the refund amount category.',
+        titleHint: 'Client Name | Brief description of issue // For reference or Not For reference',
+        titlePlaceholder: 'Example: Acme Corp | Duplicate platform fee refund',
+        fields: aopsTitleFields('Example: Acme Corp | Duplicate platform fee refund').concat([
+            area('whatIsHappening', 'What is happening', {
+                section: '1. Issue Description',
+                compileSection: '1. Issue Description',
+                compileLabel: 'What is happening',
+                hint: 'Please clarify why we need to issue a refund to the customer and what occurred that led to the refund being processed.',
+                rows: 6
+            })
+        ]).concat(bexcAccountFields('Share the steps taken so far and confirm whether you have received approval from the AM or the relevant team to issue the refund. Attach the Slack thread confirmation or a screenshot of the AM\'s approval.')).concat(amountCategoryFields('refundAmount', 'Refund Amount', 'Please mention the amount that needs to be refunded.')).concat([
+            area('whyDebitedAndWaiving', 'Why the charges were debited and why we are now refunding them', {
+                section: '5. Action Required',
+                compileSection: '5. Action Required',
+                compileIntro: 'This Jira is for reference.',
+                hint: 'This Jira is for reference.'
+            }),
+            area('underlyingIssueSteps', 'How we are fixing the issue (the problem that led to the refund)', {
+                rows: 5
+            }),
+            selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                defaultValue: 'No',
+                skipCompile: true
+            })
+        ])
+    },
+    {
+        id: 'aops-one-time-charge',
+        name: 'AOPS - One-Time Charge',
+        aops: true,
+        help: 'File on the AOPS board for a one-time customer charge. Include AM approval (Slack thread or screenshot) and the charge amount.',
+        titleHint: 'Client Name | Brief description of issue // For reference or Not For reference',
+        titlePlaceholder: 'Example: Acme Corp | Back-bill missed platform fee',
+        fields: aopsTitleFields('Example: Acme Corp | Back-bill missed platform fee').concat([
+            area('whatIsHappening', 'What is happening', {
+                section: '1. Issue Description',
+                compileSection: '1. Issue Description',
+                compileLabel: 'What is happening',
+                hint: 'Please clarify why we need to issue a charge to the customer and what occurred that led to the charge being processed.',
+                rows: 6
+            })
+        ]).concat(bexcAccountFields('Share the steps taken so far and confirm whether you have received approval from the AM or the relevant team to issue the charge. Attach the Slack thread confirmation or a screenshot of the AM\'s approval.')).concat([
+            text('chargeAmount', 'Charge Amount', {
+                section: '4. Amount',
+                compileSection: '4. Amount',
+                hint: 'Please mention the amount that needs to be charged.',
+                placeholder: 'Example: $2,500'
+            }),
+            area('whyDebitedAndWaiving', 'Why are we charging them?', {
+                section: '5. Action Required',
+                compileSection: '5. Action Required',
+                compileIntro: 'This Jira is for reference.',
+                hint: 'This Jira is for reference.'
+            }),
+            area('underlyingIssueSteps', 'How we are fixing the issue (the problem that led to the charge)', {
+                rows: 5
+            }),
+            selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                defaultValue: 'No',
+                skipCompile: true
+            })
+        ])
+    },
+    {
+        id: 'bexc-account-exemptions',
+        name: 'BEXC — Account exemptions',
+        issueType: 'Customer Task',
+        help: 'File on the BEXC board as issue type Customer Task. Use this format to request a customer account exemption and how long it is needed.',
+        titleHint: 'Client Name | Brief description of issue',
+        titlePlaceholder: 'Example: Acme Corp | Temporary exemption from spend policy block',
+        fields: [
+            area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
+            area('whatIsHappening', 'What is happening', {
+                section: '1. Issue Description',
+                compileSection: '1. Issue Description',
+                compileLabel: 'What is happening',
+                hint: 'Please clarify why we need to grant an exemption to the customer and explain the business justification for providing this exemption.',
+                placeholder: 'Example: Customer needs a 30-day exemption from the new spend-control rollout while finance finishes vendor mapping.'
+            })
+        ].concat(bexcAccountFields('Please share the steps that have been taken to resolve the issue.')).concat([
+            area('exemptionDuration', 'How long is the exemption needed for?', {
+                section: '4. Action Required from Engineering',
+                compileSection: '4. Action Required from Engineering',
+                compileLabel: 'How long is the exemption needed for?',
+                hint: 'Please clarify how long the exemption is needed for.',
+                placeholder: 'Example: 30 days, through 10 Oct 2026'
+            }),
+            selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                defaultValue: 'No',
+                skipCompile: true
+            })
+        ])
+    },
+    {
+        id: 'bill-monetization',
+        name: 'Bill - Monetization Platform',
+        help: 'Use this format for Monetization Platform / Billing engineering Jiras. Include the Cursor Bot or Billing Bot thread — that field is mandatory.',
+        titleHint: '{Company Name} // {Very short summary of the issue}',
+        titlePlaceholder: 'Example: Acme Corp // Duplicate September platform invoice',
+        fields: [
+            area('jiraTitle', 'Jira Title', { rows: 2, section: 'Jira Title' }),
+            area('issueDescription', 'Issue Description', {
+                section: '1. Issue Description',
+                compileSection: '1. Issue Description',
+                compileLabel: 'Issue Description',
+                hint: 'Provide a clear description of the issue.',
+                rows: 6
+            }),
+            area('actionReqEng', 'Action Required from Engineering', {
+                section: '2. Action Required from Engineering',
+                compileSection: '2. Action Required from Engineering',
+                compileLabel: 'Action Required from Engineering',
+                hint: 'Clearly specify what is needed from the Engineering team.',
+                rows: 5
+            }),
+            text('companyID', 'Company ID', {
+                section: '3. Account & Employee Details',
+                compileSection: '3. Account & Employee Details'
+            }),
+            text('arr', 'ARR'),
+            text('entityName', 'Entity Name'),
+            area('affectedPeople', 'Name & Role IDs of affected employee(s)/admin(s), if applicable', { rows: 4 }),
+            selectField('escalated', 'Escalated Client', ['No', 'Yes'], { defaultValue: 'No' }),
+            selectField('peoCustomer', 'PEO Customer', ['No', 'Yes'], { defaultValue: 'No' }),
+            text('logrocketSession', 'LogRocket session reproducing the issue, if applicable', {
+                section: '4. Troubleshooting Actions Taken So Far',
+                compileSection: '4. Troubleshooting Actions Taken So Far'
+            }),
+            area('proxyDetails', 'Details/screenshots from proxy session', { rows: 4 }),
+            area('additionalTroubleshooting', 'Additional troubleshooting performed', { rows: 4 }),
+            text('billingBotThread', 'Cursor Bot/Billing Bot response thread', {
+                hint: 'Mandatory. Paste the Slack/bot thread that confirms troubleshooting.'
+            }),
+            selectField('confluenceReferred', 'Confluence/Help Article/Previous Case Referred', ['No', 'Yes'], {
+                section: '5. Confluence/Help Article/Previous Case Referred',
+                compileSection: '5. Confluence/Help Article/Previous Case Referred',
+                defaultValue: 'No'
+            }),
+            area('confluenceDetails', 'Details/link if applicable', {
+                conditional: true,
+                dependencyId: 'confluenceReferred',
+                dependencyValue: 'Yes',
+                isSubField: true,
+                rows: 3
+            }),
+            selectField('officehours', 'Did you take this to OH or speak with a Lead?', ['No', 'Yes'], {
+                section: '6. OH/Lead Review',
+                compileSection: '6. OH/Lead Review',
+                defaultValue: 'No'
+            }),
+            text('ohName', 'Lead who approved the Jira ticket', {
+                conditional: true,
+                dependencyId: 'officehours',
+                dependencyValue: 'Yes',
+                isSubField: true,
+                skipCompile: true
+            }),
+            selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                defaultValue: 'No',
+                skipCompile: true
+            })
+        ]
+    },
+    {
+        id: 'payment-ops',
+        name: 'Payment Ops (PO - JIRA)',
+        help: 'Use this Payment Ops form for money-movement investigations. File on the PO Jira board.',
+        titleHint: 'Company Name | Type of payment | Short description',
+        titlePlaceholder: 'Example: Acme Corp | ACH | Missing vendor payout',
+        fields: [
+            area('jiraTitle', 'Summary', { rows: 2, section: 'Summary' }),
+            text('companyName', 'Company Name', {
+                section: '1. Payment Details',
+                compileSection: '1. Payment Details'
+            }),
+            text('companyID', 'COID'),
+            text('paymentType', 'Type of Payment'),
+            area('beneficiaryNames', 'Beneficiary Name(s) (if applicable)', { rows: 3 }),
+            area('roleIds', 'Role ID(s) (if applicable)', { rows: 3 }),
+            text('chargeName', 'Name of Charge'),
+            text('moneyFlow', 'Money Flow or Order ID(s)'),
+            text('country', 'Country'),
+            text('amountCurrency', 'Amount & Currency'),
+            text('paymentDate', 'Payment Date'),
+            text('transactionType', 'Transaction Type (if known)'),
+            text('sfdcCase', 'SFDC Case Link (if applicable)'),
+            selectField('peoEor', 'PEO/EOR Customer', ['No', 'Yes'], { defaultValue: 'No' }),
+            area('ask', 'Ask', {
+                section: '2. Ask',
+                compileSection: '2. Ask',
+                compileLabel: 'Ask',
+                hint: 'State the Payment Ops / Engineering ask clearly.',
+                rows: 6
+            }),
+            selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                defaultValue: 'No',
+                skipCompile: true
+            })
+        ]
+    },
+    {
+        id: 'flex-jira',
+        name: 'FLEX JIRA',
+        issueType: 'Customer Task',
+        help: 'File in the Benefits space as issue type Customer Task > Review and Create. Choose the correct Jira project, then complete the standard body plus Flex-specific fields.',
+        titleHint: 'Client Name | Brief description of issue',
+        titlePlaceholder: 'Example: Acme Corp | HSA deduction missing after QLE',
+        fields: [
+            selectField('flexProject', 'Jira Project (Product Area)', [
+                '',
+                'Ben Admin - Employee',
+                'Ben Admin - Employer',
+                'Benefits Marketplace',
+                'EDI/API',
+                'Infrastructure',
+                'Benefits Flex',
+                'Benefits Financial Platform',
+                'Benefits Compliance'
+            ], {
+                section: 'Project',
+                compileSection: 'Project',
+                compileLabel: 'Jira Project',
+                tooltip: 'Ben Admin - Employee: EE enrollment/EOI/QLE. Employer: company level. Marketplace: integrations/forms. EDI/API: products & partners / add carriers to OE. Infrastructure: IM issues. Benefits Flex: HSA/FSA/Commuter. Financial Platform: HSA/FSA/Commuter deductions. Compliance: ACA/COBRA.'
+            }),
+            {
+                id: 'flexProjectHelp',
+                type: 'html',
+                skipCompile: true,
+                html: '<p class="hint">Ben Admin - Employee: enrollment/EOI/QLE. Ben Admin - Employer: company level. Benefits Marketplace: integrations/forms. EDI/API: products &amp; partners. Infrastructure: IM issues. Benefits Flex: HSA/FSA/Commuter. Benefits Financial Platform: deduction issues. Benefits Compliance: ACA/COBRA.</p>'
+            },
+            area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
+            area('whatIsHappening', 'What is happening', {
+                section: '1. Issue Description',
+                compileSection: '1. Issue Description',
+                compileLabel: 'What is happening',
+                hint: 'Observable system (error messages, incorrect output, unexpected system behavior)'
+            }),
+            area('whenItHappens', 'When it happens', {
+                compileLabel: 'When it happens',
+                hint: 'Trigger conditions (what specific app/payroll run/employee is impacted and what actions are triggering the system behavior)'
+            }),
+            area('whatShouldHappen', 'What should happen', {
+                compileLabel: 'What should happen',
+                hint: 'Correct system behavior, confirmed via demo, playbooks, or HC articles'
+            }),
+            text('companyID', 'Company ID', {
+                section: '2. Account Details',
+                compileSection: '2. Account Details'
+            }),
+            text('country', 'Country the run belongs to'),
+            text('arr', 'ARR'),
+            text('entityName', 'Entity Name'),
+            area('affectedPeople', 'Name & Role IDs of affected employee(s) / admin(s), if applicable', { rows: 4 }),
+            selectField('eeOrContractor', 'Is this an Employee/Contractor?', ['', 'Employee', 'Contractor', 'Admin', 'Both / multiple', 'n/a']),
+            area('payrunLink', 'Link to payrun with payrun ID and Check Date of Run', { rows: 3 }),
+            selectField('escalated', 'Escalated client', ['No', 'Yes'], { defaultValue: 'No' }),
+            selectField('peoCustomer', 'PEO Customer', ['No', 'Yes'], { defaultValue: 'No' }),
+            {
+                id: 'troubleshootingIntro',
+                type: 'html',
+                skipCompile: true,
+                section: '3. Troubleshooting Actions Taken So Far',
+                html: '<p class="hint">Complete each applicable pre-check. Follow-up fields appear when a box is checked.</p>'
+            },
+            checkbox('tsLogrocket', 'LogRocket reviewed', {
+                compileSection: '3. Troubleshooting Actions Taken So Far'
+            }),
+            text('logrocketLink', 'LogRocket link attached with support screenshots', {
+                conditional: true, dependencyId: 'tsLogrocket', dependencyValue: 'Yes', isSubField: true
+            }),
+            text('logrocketTime', 'Confirm the time to review on the LogRocket recording', {
+                conditional: true, dependencyId: 'tsLogrocket', dependencyValue: 'Yes', isSubField: true
+            }),
+            checkbox('tsDebugger', 'Debugger reviewed'),
+            selectField('employeeDebugger', 'Employee debugger', ['', 'Yes', 'No', 'n/a'], {
+                conditional: true, dependencyId: 'tsDebugger', dependencyValue: 'Yes', isSubField: true
+            }),
+            selectField('companyDebugger', 'Company debugger', ['', 'Yes', 'No', 'n/a'], {
+                conditional: true, dependencyId: 'tsDebugger', dependencyValue: 'Yes', isSubField: true
+            }),
+            area('debuggerFindings', 'Key findings summarized with screenshots to support', {
+                conditional: true, dependencyId: 'tsDebugger', dependencyValue: 'Yes', isSubField: true, rows: 4
+            }),
+            checkbox('tsScreenshots', 'Screenshots captured'),
+            area('screenshotFrontEnd', 'Front End view of Error state / incorrect output', {
+                conditional: true, dependencyId: 'tsScreenshots', dependencyValue: 'Yes', isSubField: true, rows: 4
+            }),
+            area('screenshotFindings', 'Key findings summarized', {
+                conditional: true, dependencyId: 'tsScreenshots', dependencyValue: 'Yes', isSubField: true, rows: 4
+            }),
+            checkbox('tsDemo', 'Tested on Demo Account'),
+            selectField('demoRecreated', 'Were you able to recreate the situation on your demo', ['', 'Yes', 'No'], {
+                conditional: true, dependencyId: 'tsDemo', dependencyValue: 'Yes', isSubField: true
+            }),
+            selectField('companyOrGeneral', 'Confirm if Company specific or General system functionality', ['', 'Company specific', 'General system functionality', 'Unknown'], {
+                conditional: true, dependencyId: 'tsDemo', dependencyValue: 'Yes', isSubField: true
+            }),
+            checkbox('tsPlaybooks', 'Playbooks/Help Center/Confluence review'),
+            area('playbookContent', 'Confirm the relevant content used to support your findings', {
+                conditional: true, dependencyId: 'tsPlaybooks', dependencyValue: 'Yes', isSubField: true, rows: 4
+            }),
+            checkbox('tsRiskEval', 'Risk Eval ID'),
+            text('riskEvalId', 'Risk Eval ID', {
+                conditional: true, dependencyId: 'tsRiskEval', dependencyValue: 'Yes', isSubField: true,
+                hint: 'Relevant for banking expediting requests approved by the risk team'
+            }),
+            checkboxes('engAskTypes', 'Pick the relevant ask types', [
+                'Fix a bug',
+                'Investigate root cause',
+                'Confirm expected behavior',
+                'Data correction'
+            ], {
+                section: '4. Action Required from Engineering',
+                compileSection: '4. Action Required from Engineering',
+                compileLabel: 'Ask types'
+            }),
+            area('engExpectedOutcome', 'Expected outcome', { rows: 3 }),
+            text('engSentence', 'Required sentence', { readOnly: true }),
+            selectField('officehours', 'Did you take this to OH or speak with a Lead?', ['No', 'Yes'], { defaultValue: 'No' }),
+            text('ohName', 'Who was the Lead who approved the Jira ticket?', {
+                conditional: true, dependencyId: 'officehours', dependencyValue: 'Yes', isSubField: true, skipCompile: true
+            }),
+            selectField('flexComponent', 'Components', [
+                '',
+                'Benefits - Flex',
+                '1P-Flex (Elevate-issued cards)',
+                '3P-Flex (Wex, Navia, or other third-party)'
+            ], {
+                section: '5. Product-Specific Details',
+                compileSection: '5. Product-Specific Details',
+                compileLabel: 'Components'
+            }),
+            selectField('criticalBlocker', 'Critical Blocker?', ['', 'No', 'Yes', 'Unsure — ask a Lead/Supervisor']),
+            selectField('churnRisk', 'Customer Churn Risk', ['No risk Forecasted', 'Churn risk', 'Unknown'], {
+                defaultValue: 'No risk Forecasted',
+                hint: 'Use No risk Forecasted unless the client, AM, or TAM has explicitly flagged churn for this issue.'
+            }),
+            selectField('businessImpact', 'Business Impact', ['', 'High', 'Low'], {
+                hint: 'High: large number of EEs, widespread issue, churn risk/escalated. Low: everything else.'
+            }),
+            area('productSpecificDetails', 'Additional product details', { rows: 4 }),
+            selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                defaultValue: 'No',
+                skipCompile: true
+            })
+        ]
+    },
+    {
+        id: 'pf-tax',
+        name: 'Tax Specific (PF JIRA)',
+        help: 'Use this USGP / Legacy tax format. Title as USGP or Legacy // Account name // Short description. CTI and Lead approval are required.',
+        titleHint: 'USGP or Legacy // Account name // Short Description of Issue',
+        titlePlaceholder: 'Example: USGP // Acme Corp // Incorrect FIT withholding after supplemental run',
+        fields: [
+            area('jiraTitle', 'Summary / Jira ticket title', { rows: 2, section: 'Jira Title' }),
+            area('issueDescription', 'Issue Description', {
+                section: '1. Issue Description',
+                compileSection: '1. Issue Description',
+                compileLabel: 'Issue Description',
+                rows: 6
+            }),
+            text('companyID', 'Company ID', {
+                section: '2. Account and EE Details',
+                compileSection: '2. Account and EE Details'
+            }),
+            text('cti', 'CTI', {
+                hint: 'Mandatory. Use the CTI Loom/guide to find this value.'
+            }),
+            text('arr', 'ARR'),
+            text('firstCheckDate', 'First Check Date'),
+            text('entityName', 'Entity Name'),
+            area('affectedPeople', 'Name and Role IDs of affected employee(s) or admin(s), if applicable', { rows: 4 }),
+            selectField('eeOrContractor', 'Employee or contractor status', ['', 'Employee', 'Contractor', 'Admin', 'Both / multiple', 'n/a']),
+            text('payrunId', 'Payrun ID'),
+            selectField('escalated', 'Escalated client', ['No', 'Yes'], { defaultValue: 'No' }),
+            selectField('peoCustomer', 'PEO Customer', ['No', 'Yes'], { defaultValue: 'No' }),
+            text('peoStatus', 'Active/ex-PEO status and joining or termination context', {
+                conditional: true,
+                dependencyId: 'peoCustomer',
+                dependencyValue: 'Yes',
+                isSubField: true
+            }),
+            area('troubleshooting', 'Troubleshooting actions taken so far', {
+                section: '3. Troubleshooting Actions Taken So Far',
+                compileSection: '3. Troubleshooting Actions Taken So Far',
+                compileLabel: 'Troubleshooting actions taken so far',
+                hint: 'This should never be blank.',
+                rows: 6
+            }),
+            area('taxShortIds', 'Tax short IDs for tax calculations or tax adjustments', {
+                hint: 'Use Tax Short IDs - US Taxation and Filings.',
+                rows: 4
+            }),
+            area('actionReqEng', 'Action required from Eng', {
+                section: '4. Action Required from Engineering',
+                compileSection: '4. Action Required from Engineering',
+                compileLabel: 'Action required from Eng',
+                rows: 5
+            }),
+            area('productSpecificDetails', 'Product-Specific Issue Details', {
+                section: '5. Product-Specific Details',
+                compileSection: '5. Product-Specific Details',
+                compileLabel: 'Product-Specific Issue Details',
+                hint: 'Include when relevant.',
+                rows: 4
+            }),
+            text('ohName', 'Who was the Lead who approved the Jira ticket?', {
+                section: '6. OH/Lead Review',
+                compileSection: '6. OH/Lead Review',
+                compileLabel: 'Lead who approved the Jira ticket',
+                hint: 'Required.'
+            }),
+            selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                defaultValue: 'No',
+                skipCompile: true
+            })
+        ]
+    }
+];
+
+const savedValues = {};
+let currentBoardId = '';
+
+function getBoard(id) {
+    return BOARDS.find(function (board) { return board.id === id; });
+}
+
+function normalizeTitle(value) {
+    return String(value || '')
+        .replace(/\*\*/g, '')
+        .replace(/[*_#]/g, '')
+        .replace(/:$/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+}
+
+function titlesMatch(left, right) {
+    const a = normalizeTitle(left);
+    const b = normalizeTitle(right);
+    return !!a && !!b && a === b;
+}
+
+function headingFromField(field) {
+    const raw = field.compileSection || field.section || '';
+    const match = String(raw).match(/\*\*(.+?)\*\*/);
+    const heading = (match ? match[1] : String(raw))
+        .replace(/\n/g, ' ')
+        .replace(/:$/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return heading;
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function captureOpenValues() {
+    document.querySelectorAll('#formRoot input, #formRoot textarea, #formRoot select').forEach(function (input) {
+        if (!input.id && !input.getAttribute('data-group')) return;
+        if (input.type === 'checkbox' && input.getAttribute('data-group')) return;
+        if (input.type === 'checkbox') {
+            savedValues[input.id] = input.checked ? 'Yes' : 'No';
+        } else if (input.id) {
+            savedValues[input.id] = input.value;
+        }
+    });
+    document.querySelectorAll('#formRoot [data-checkbox-group]').forEach(function (wrap) {
+        const groupId = wrap.getAttribute('data-checkbox-group');
+        savedValues[groupId] = getCheckboxGroupValues(groupId);
+    });
+}
+
+function getCheckboxGroupValues(groupId) {
+    return Array.from(document.querySelectorAll('input[data-group="' + groupId + '"]:checked')).map(function (input) {
+        return input.value;
+    });
+}
+
+function dependencyMatches(dependency, expected) {
+    if (!dependency) return false;
+    if (dependency.type === 'checkbox') {
+        const checked = dependency.checked;
+        if (expected === 'Yes') return checked;
+        if (expected === 'No') return !checked;
+    }
+    return String(dependency.value).trim() === String(expected);
+}
+
+function fieldWrapperId(field) {
+    return field.id + 'Wrap';
+}
+
+function restoreCheckbox(input, field) {
+    if (Object.prototype.hasOwnProperty.call(savedValues, field.id)) {
+        input.checked = savedValues[field.id] === 'Yes';
+    }
+}
+
+function renderField(field) {
+    const wrap = document.createElement('div');
+    wrap.id = fieldWrapperId(field);
+    wrap.className = 'field-block' + (field.isSubField ? ' sub-field' : '');
+    if (field.conditional) wrap.style.display = 'none';
+
+    if (field.type === 'html') {
+        wrap.innerHTML = field.html || '';
+        wrap.classList.add('html-block');
+        return wrap;
+    }
+
+    if (field.type === 'checkbox') {
+        wrap.classList.add('checkbox-row');
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.id = field.id;
+        restoreCheckbox(input, field);
+        const label = document.createElement('label');
+        label.className = 'gp-label';
+        label.setAttribute('for', field.id);
+        label.textContent = field.label;
+        wrap.appendChild(input);
+        wrap.appendChild(label);
+        if (field.hint) {
+            const hint = document.createElement('span');
+            hint.className = 'hint';
+            hint.textContent = field.hint;
+            wrap.appendChild(hint);
+        }
+        return wrap;
+    }
+
+    if (field.type === 'checkboxes') {
+        wrap.setAttribute('data-checkbox-group', field.id);
+        const label = document.createElement('div');
+        label.className = 'gp-label';
+        label.textContent = field.label;
+        wrap.appendChild(label);
+        if (field.hint) {
+            const hint = document.createElement('span');
+            hint.className = 'hint';
+            hint.textContent = field.hint;
+            wrap.appendChild(hint);
+        }
+        const saved = savedValues[field.id] || [];
+        (field.options || []).forEach(function (optionValue, index) {
+            const row = document.createElement('label');
+            row.className = 'checklist-item';
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.setAttribute('data-group', field.id);
+            input.value = optionValue;
+            input.id = field.id + '_' + index;
+            if (saved.indexOf(optionValue) !== -1) input.checked = true;
+            const span = document.createElement('span');
+            span.textContent = optionValue;
+            row.appendChild(input);
+            row.appendChild(span);
+            wrap.appendChild(row);
+        });
+        return wrap;
+    }
+
+    const skipDuplicateLabel = field.hideLabel || (field.section && titlesMatch(field.section, field.compileLabel || field.label));
+
+    if (!skipDuplicateLabel) {
+        const label = document.createElement('label');
+        label.className = 'gp-label';
+        label.setAttribute('for', field.id);
+        if (field.labelHtml) {
+            label.innerHTML = field.labelHtml;
+        } else {
+            label.textContent = field.label;
+        }
+        if (field.tooltip) {
+            const tip = document.createElement('div');
+            tip.className = 'tooltip';
+            tip.textContent = 'ⓘ';
+            const textSpan = document.createElement('span');
+            textSpan.className = 'tooltiptext';
+            textSpan.textContent = field.tooltip;
+            tip.appendChild(textSpan);
+            label.appendChild(tip);
+        }
+        wrap.appendChild(label);
+    }
+
+    if (field.hint) {
+        const hint = document.createElement('span');
+        hint.className = 'hint';
+        hint.textContent = field.hint;
+        wrap.appendChild(hint);
+    }
+
+    let input;
+    if (field.type === 'textarea') {
+        input = document.createElement('textarea');
+        input.rows = field.rows || 6;
+    } else if (field.type === 'select') {
+        input = document.createElement('select');
+        (field.options || []).forEach(function (optionValue) {
+            const option = document.createElement('option');
+            option.value = optionValue;
+            option.textContent = optionValue === '' ? 'Select...' : optionValue;
+            input.appendChild(option);
+        });
+    } else {
+        input = document.createElement('input');
+        input.type = 'text';
+    }
+
+    input.id = field.id;
+    input.className = 'gp-input';
+    if (field.placeholder) input.placeholder = field.placeholder;
+    if (field.readOnly) input.readOnly = true;
+    if (Object.prototype.hasOwnProperty.call(savedValues, field.id)) {
+        input.value = savedValues[field.id];
+    } else if (field.defaultValue) {
+        input.value = field.defaultValue;
+    }
+    wrap.appendChild(input);
+    return wrap;
+}
+
+function syncConditionals(board) {
+    board.fields.forEach(function (field) {
+        if (!field.conditional) return;
+        const wrap = document.getElementById(fieldWrapperId(field));
+        const dependency = document.getElementById(field.dependencyId);
+        const input = document.getElementById(field.id);
+        if (!wrap || !dependency) return;
+        const visible = dependencyMatches(dependency, field.dependencyValue);
+        wrap.style.display = visible ? 'block' : 'none';
+        if (!visible && input && !Object.prototype.hasOwnProperty.call(savedValues, field.id)) {
+            input.value = '';
+        }
+    });
+}
+
+function syncWaiverCategory() {
+    const amountInput = document.getElementById('waiverAmount')
+        || document.getElementById('refundAmount');
+    const categoryInput = document.getElementById('amountCategory');
+    const approversInput = document.getElementById('requiredApprovers');
+    if (!amountInput || !categoryInput || !approversInput) return;
+    const amount = parseAmount(amountInput.value);
+    if (amount === null) return;
+    const band = categoryForAmount(amount);
+    categoryInput.value = band.label;
+    approversInput.value = band.approvers;
+    savedValues.amountCategory = band.label;
+    savedValues.requiredApprovers = band.approvers;
+}
+
+function syncApproversFromCategory() {
+    const categoryInput = document.getElementById('amountCategory');
+    const approversInput = document.getElementById('requiredApprovers');
+    if (!categoryInput || !approversInput) return;
+    const band = AMOUNT_CATEGORIES.find(function (item) { return item.label === categoryInput.value; });
+    if (!band) return;
+    approversInput.value = band.approvers;
+    savedValues.requiredApprovers = band.approvers;
+}
+
+function syncEngSentence() {
+    const sentence = document.getElementById('engSentence');
+    const outcome = document.getElementById('engExpectedOutcome');
+    if (!sentence) return;
+    const checked = getCheckboxGroupValues('engAskTypes').map(function (item) {
+        return item.toLowerCase();
+    });
+    const action = checked.length ? checked.join(' and ') : '[action]';
+    const result = outcome && outcome.value.trim() ? outcome.value.trim() : '[expected outcome]';
+    sentence.value = 'Engineering is requested to ' + action + ' so that ' + result + '.';
+    savedValues.engSentence = sentence.value;
+}
+
+function bindBoardEvents(board) {
+    board.fields.forEach(function (field) {
+        if (field.type === 'html') return;
+        if (field.type === 'checkboxes') {
+            document.querySelectorAll('input[data-group="' + field.id + '"]').forEach(function (input) {
+                input.addEventListener('change', function () {
+                    savedValues[field.id] = getCheckboxGroupValues(field.id);
+                    syncConditionals(board);
+                    syncEngSentence();
+                    refreshPreview();
+                });
+            });
+            return;
+        }
+        const input = document.getElementById(field.id);
+        if (!input) return;
+        const handler = function () {
+            savedValues[field.id] = input.type === 'checkbox' ? (input.checked ? 'Yes' : 'No') : input.value;
+            if (field.id === 'confirmation') checkConfirmationStatus();
+                    if (field.id === 'waiverAmount' || field.id === 'refundAmount') syncWaiverCategory();
+            if (field.id === 'amountCategory') syncApproversFromCategory();
+            if (field.id === 'engExpectedOutcome') syncEngSentence();
+            syncConditionals(board);
+            refreshPreview();
+        };
+        input.addEventListener('input', handler);
+        input.addEventListener('change', handler);
+    });
+    syncWaiverCategory();
+    syncEngSentence();
+    refreshPreview();
+}
+
+function renderBoard(boardId) {
+    captureOpenValues();
+    currentBoardId = boardId;
+    const formRoot = document.getElementById('formRoot');
+    const emptyState = document.getElementById('emptyState');
+    const actions = document.getElementById('formActions');
+    const output = document.getElementById('outputBlock');
+    const help = document.getElementById('boardHelp');
+    const workspace = document.getElementById('workspace');
+    formRoot.innerHTML = '';
+
+    const board = getBoard(boardId);
+    if (!board) {
+        emptyState.style.display = 'block';
+        actions.style.display = 'none';
+        output.style.display = 'none';
+        if (workspace) workspace.classList.remove('has-preview');
+        help.textContent = 'Select a board with a set template. If the destination board does not have one, use Rippling Standard template.';
+        document.title = 'Account Operation JIRA generator';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+    actions.style.display = 'flex';
+    output.style.display = 'block';
+    if (workspace) workspace.classList.add('has-preview');
+    savedValues.confirmation = 'No';
+    help.textContent = board.help;
+    document.title = 'Account Operation JIRA generator — ' + board.name;
+
+    const titleField = board.fields.find(function (field) { return field.id === 'jiraTitle'; });
+    if (titleField) {
+        titleField.hint = board.titleHint;
+        titleField.placeholder = board.titlePlaceholder;
+    }
+
+    let currentSection = null;
+    board.fields.forEach(function (field) {
+        if (field.section) {
+            currentSection = document.createElement('section');
+            currentSection.className = 'form-section';
+            const header = document.createElement('div');
+            header.className = 'section-header';
+            header.textContent = field.section;
+            currentSection.appendChild(header);
+            formRoot.appendChild(currentSection);
+        }
+        (currentSection || formRoot).appendChild(renderField(field));
+    });
+
+    bindBoardEvents(board);
+    syncConditionals(board);
+    checkConfirmationStatus();
+    document.getElementById('compiledTextArea').value = '';
+    refreshPreview();
+    showTab('preview');
+}
+
+function cleanLabel(label) {
+    return String(label || '')
+        .replace(/^[a-z]\.\s*/i, '')
+        .replace(/:$/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function numberedHeading(title, count) {
+    title = String(title || '').replace(/:$/g, '').trim();
+    if (!title) return '';
+    if (/^\d+\.\s/.test(title)) return title;
+    return count + '. ' + title;
+}
+
+function linkify(text) {
+    return escapeHtml(text).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+}
+
+function buildTicket(board) {
+    const sections = [];
+    let title = '';
+    let fieldType = '';
+
+    function current() {
+        return sections[sections.length - 1];
+    }
+
+    function ensureSection(rawTitle) {
+        const heading = numberedHeading(rawTitle, sections.length + 1);
+        if (!heading) return;
+        if (current() && titlesMatch(current().title, heading)) return;
+        sections.push({ title: heading, intro: '', items: [] });
+    }
+
+    function addItem(label, value) {
+        const text = String(value || '').trim();
+        if (!text && fieldType !== 'checkbox') return;
+        if (!current()) ensureSection('Details');
+        current().items.push({
+            label: cleanLabel(label),
+            value: text
+        });
+    }
+
+    board.fields.forEach(function (field) {
+        fieldType = field.type;
+        if (field.skipCompile) return;
+        if (field.conditional) {
+            const dependencyElement = document.getElementById(field.dependencyId);
+            if (!dependencyMatches(dependencyElement, field.dependencyValue)) return;
+        }
+
+        if (field.id === 'jiraTitle') {
+            const inputElement = document.getElementById(field.id);
+            title = inputElement ? inputElement.value.trim() : '';
+            const flag = document.getElementById('referenceFlag');
+            if (board.aops && flag && flag.value.trim() && title) {
+                title = title + ' // ' + flag.value.trim();
+            }
+            return;
+        }
+
+        const heading = headingFromField(field);
+        if (heading && (field.compileSection || field.section) && field.type !== 'html') {
+            ensureSection(heading);
+        }
+        if (field.compileIntro) {
+            const flag = document.getElementById('referenceFlag');
+            if (flag && flag.value.trim() === 'Not For reference') {
+                addItem('Note', 'This Jira is not for reference.');
+            } else {
+                addItem('Note', field.compileIntro);
+            }
+        }
+
+        const label = field.compileLabel || field.label || '';
+
+        if (field.type === 'checkbox') {
+            const inputElement = document.getElementById(field.id);
+            if (!inputElement || !inputElement.checked) return;
+            addItem(label, 'Yes');
+            return;
+        }
+
+        if (field.type === 'checkboxes') {
+            const selected = getCheckboxGroupValues(field.id);
+            if (!selected.length) return;
+            addItem(label, selected.join(', '));
+            return;
+        }
+
+        const inputElement = document.getElementById(field.id);
+        if (!inputElement) return;
+        let value = inputElement.value.trim();
+        if (field.id === 'officehours' && (value === 'Yes - Jira Advised' || value === 'Yes')) {
+            const ohNameInput = document.getElementById('ohName');
+            const ohNameValue = ohNameInput ? ohNameInput.value.trim() : '';
+            if (ohNameValue) value = value + ' (Auth by: ' + ohNameValue + ')';
+        }
+        if (!value) return;
+        if (value === 'n/a') return;
+        if ((field.id === 'officehours' || field.id === 'workaround' || field.id === 'escalated' || field.id === 'peoCustomer' || field.id === 'peoEor') && value === 'No') return;
+        if (value.indexOf('[action]') !== -1 || value.indexOf('[expected outcome]') !== -1) return;
+        addItem(label, value);
+    });
+
+    const filled = sections.filter(function (section) { return section.items.length; });
+    filled.forEach(function (section, index) {
+        const base = section.title.replace(/^\d+\.\s*/, '');
+        section.title = (index + 1) + '. ' + base;
+    });
+
+    return { title: title, boardName: board.name, issueType: board.issueType || '', sections: filled };
+}
+
+function renderTicketHtml(ticket) {
+    if (!ticket) return '<p class="ticket-empty">Fill in the form to see a live preview.</p>';
+    let html = '<div class="ticket-kicker">Description</div>';
+    html += '<h1 class="ticket-title">' + escapeHtml(ticket.title || 'Untitled Jira') + '</h1>';
+    html += '<p class="ticket-meta">' + escapeHtml(ticket.boardName) + (ticket.issueType ? ' · ' + escapeHtml(ticket.issueType) : '') + '</p>';
+    ticket.sections.forEach(function (section) {
+        if (!section.items.length && !section.intro) return;
+        html += '<h2>' + escapeHtml(section.title) + '</h2><ul>';
+        section.items.forEach(function (item) {
+            html += '<li><strong>' + escapeHtml(item.label) + ':</strong> ' + linkify(item.value).replace(/\n/g, '<br>') + '</li>';
+        });
+        html += '</ul>';
+    });
+    return html;
+}
+
+function renderTicketMarkdown(ticket) {
+    if (!ticket) return '';
+    let text = '';
+    if (ticket.title) text += '**' + ticket.title + '**\n\n';
+    ticket.sections.forEach(function (section) {
+        if (!section.items.length) return;
+        text += '##' + ' ' + section.title + '\n\n';
+        section.items.forEach(function (item) {
+            const value = item.value.replace(/\n/g, '\n  ');
+            text += '- **' + item.label + ':** ' + value + '\n';
+        });
+        text += '\n';
+    });
+    return text.trim() + '\n';
+}
+
+function refreshPreview() {
+    const board = getBoard(currentBoardId);
+    const preview = document.getElementById('compiledPreview');
+    const copyArea = document.getElementById('copyTextArea');
+    const hidden = document.getElementById('compiledTextArea');
+    if (!preview) return;
+    if (!board) {
+        preview.innerHTML = '<p class="ticket-empty">Select a board to preview the Jira.</p>';
+        if (copyArea) copyArea.value = '';
+        if (hidden) hidden.value = '';
+        return;
+    }
+    const ticket = buildTicket(board);
+    preview.innerHTML = renderTicketHtml(ticket);
+    const markdown = renderTicketMarkdown(ticket);
+    if (copyArea) copyArea.value = markdown;
+    if (hidden) hidden.value = markdown;
+}
+
+function showTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(function (btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
+    });
+    document.querySelectorAll('.tab-panel').forEach(function (panel) {
+        panel.classList.toggle('active', panel.id === 'panel' + tabId.charAt(0).toUpperCase() + tabId.slice(1));
+    });
+}
+
+function compileText() {
+    const confirmationInput = document.getElementById('confirmation');
+    if (!confirmationInput || confirmationInput.value.trim() !== 'Yes') {
+        alert("Please confirm you have included all requested information by setting the confirmation field to 'Yes'.");
+        return;
+    }
+    refreshPreview();
+    showTab('preview');
+}
+
+async function copyForJira() {
+    refreshPreview();
+    const preview = document.getElementById('compiledPreview');
+    const markdown = document.getElementById('copyTextArea').value;
+    try {
+        if (navigator.clipboard && window.ClipboardItem) {
+            const html = preview.innerHTML;
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    'text/html': new Blob([html], { type: 'text/html' }),
+                    'text/plain': new Blob([markdown], { type: 'text/plain' })
+                })
+            ]);
+        } else {
+            document.getElementById('copyTextArea').select();
+            document.execCommand('copy');
+        }
+        const btn = document.getElementById('copyButton');
+        const original = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(function () { btn.textContent = original; }, 1400);
+    } catch (err) {
+        showTab('copy');
+        document.getElementById('copyTextArea').select();
+    }
+}
+
+function resetInput() {
+    const board = getBoard(currentBoardId);
+    if (!board) return;
+    board.fields.forEach(function (field) {
+        if (field.type === 'html') return;
+        if (field.type === 'checkboxes') {
+            document.querySelectorAll('input[data-group="' + field.id + '"]').forEach(function (input) {
+                input.checked = false;
+            });
+            delete savedValues[field.id];
+            return;
+        }
+        const input = document.getElementById(field.id);
+        if (!input) return;
+        if (input.type === 'checkbox') {
+            input.checked = false;
+        } else {
+            input.value = field.defaultValue || '';
+        }
+        delete savedValues[field.id];
+    });
+    document.getElementById('compiledTextArea').value = '';
+    refreshPreview();
+    showTab('preview');
+    syncConditionals(board);
+    syncEngSentence();
+    checkConfirmationStatus();
+}
+
+function checkConfirmationStatus() {
+    const confirmationInput = document.getElementById('confirmation');
+    const createButton = document.getElementById('createButton');
+    const wrapper = document.getElementById('createButtonWrapper');
+    if (!confirmationInput || !createButton) return;
+
+    if (confirmationInput.value.trim() !== 'Yes') {
+        createButton.disabled = true;
+        wrapper.classList.add('disabled-wrapper');
+        createButton.style.cursor = 'not-allowed';
+    } else {
+        createButton.disabled = false;
+        wrapper.classList.remove('disabled-wrapper');
+        createButton.style.cursor = 'pointer';
+    }
+}
+
+function initBoardSelect() {
+    const select = document.getElementById('boardSelect');
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Select Jira board / type...';
+    select.appendChild(placeholder);
+    BOARDS.forEach(function (board) {
+        const option = document.createElement('option');
+        option.value = board.id;
+        option.textContent = board.name;
+        select.appendChild(option);
+    });
+    select.addEventListener('change', function () {
+        renderBoard(select.value);
+    });
+}
+
+document.getElementById('createButton').addEventListener('click', compileText);
+document.getElementById('resetButton').addEventListener('click', resetInput);
+document.getElementById('copyButton').addEventListener('click', copyForJira);
+document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        showTab(btn.getAttribute('data-tab'));
+    });
+});
+initBoardSelect();

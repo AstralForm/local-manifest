@@ -1,0 +1,80 @@
+<!--
+  Account Operation JIRA generator — Confluence description
+  Paste this HTML into the Aura HTML macro (Insert → Aura HTML / HTML).
+-->
+<div style="font-family:Segoe UI,system-ui,-apple-system,Arial,sans-serif;color:#1b2430;line-height:1.55;max-width:820px;">
+  <p style="display:inline-block;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:999px;margin:0 0 10px;">Account Operation</p>
+  <h1 style="font-size:26px;margin:0 0 10px;letter-spacing:-.02em;">Account Operation JIRA generator</h1>
+  <p style="color:#5b6777;margin:0 0 16px;">
+    Use this tool to write complete Jira tickets without rebuilding the description from scratch.
+    Pick the board that matches the work. <strong>If the destination board does not have a set template, use Rippling Standard template.</strong>
+    Preview the ticket, then copy it into Jira.
+  </p>
+
+  <h2 style="font-size:16px;margin:22px 0 8px;">Templates included</h2>
+  <ul style="margin:0 0 16px;padding-left:20px;">
+    <li><strong>Rippling Standard template</strong> — use this when the board does not have a set template</li>
+    <li>Global Payroll</li>
+    <li>AOPS - Invoice Waiver</li>
+    <li>AOPS - One-Time Refund</li>
+    <li>AOPS - One-Time Charge</li>
+    <li>BEXC — Account exemptions</li>
+    <li>Bill - Monetization Platform</li>
+    <li>Payment Ops (PO - JIRA)</li>
+    <li>FLEX JIRA</li>
+    <li>Tax Specific (PF JIRA)</li>
+  </ul>
+  <p style="color:#5b6777;margin:0 0 16px;">When no board is selected, the generator shows SLAs vs Priority (TTR by P0–P4).</p>
+
+  <h2 style="font-size:16px;margin:22px 0 8px;">Tips on how to use this template</h2>
+  <ol style="margin:0;padding-left:20px;">
+    <li>Select the Jira board that matches the work. Do not mix formats (for example, do not use Global Payroll for an AOPS refund). If the board has no set template, choose <strong>Rippling Standard template</strong>.</li>
+    <li>Fill every required field for that board. Empty fields are left out of Preview on purpose so the ticket stays clean.</li>
+    <li>AOPS titles must follow: <code>Client Name | Brief description of issue // For reference or Not For reference</code>. Use the title box for “Client Name | Brief description”, then pick For reference / Not For reference from the dropdown. Preview adds the suffix.</li>
+    <li>
+      <strong>AOPS - Invoice Waiver</strong> and <strong>AOPS - One-Time Refund</strong>: enter the dollar amount. Amount Category and Required Approvers fill from this matrix:
+      <table style="border-collapse:collapse;margin:10px 0;width:100%;font-size:13px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;border-bottom:1px solid #cbd5e1;padding:6px 8px;">Amount</th>
+            <th style="text-align:left;border-bottom:1px solid #cbd5e1;padding:6px 8px;">Required Approvers</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">Under $1,000</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">No approver needed</td></tr>
+          <tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">$1,000 – $5,000</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">Requester's Manager</td></tr>
+          <tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">$5,000 – $10,000</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">Requester's Manager + Director</td></tr>
+          <tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">$10,000 – $50,000</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">Requester's Manager + Director + VP</td></tr>
+          <tr><td style="padding:6px 8px;">$50,000+</td><td style="padding:6px 8px;">Requester's Manager + Director + VP + Vipin Sethi (Accounting)</td></tr>
+        </tbody>
+      </table>
+      Attach AM approval (Slack thread or screenshot) in troubleshooting.
+    </li>
+    <li><strong>AOPS - One-Time Charge</strong> does not use Amount Category or Required Approvers. Enter Charge Amount only, plus AM approval.</li>
+    <li>Checkboxes (LogRocket, debugger, screenshots, demo, playbooks, Risk Eval) only show follow-up fields when checked.</li>
+    <li>Set “Have you included all requested information?” to Yes before Create Jira Text. That confirmation is a quality gate and is not pasted into Jira.</li>
+    <li>Use Preview to confirm numbered headings and “Label: value” bullets look like a real Jira description.</li>
+    <li>Click Copy for Jira, then paste into Jira with Command+V (Mac) or Ctrl+V (Windows). Do not use Shift+Command+V / Ctrl+Shift+V, or heading formatting is lost.</li>
+    <li>
+      Pick Jira priority to match customer-task SLAs:
+      <ul>
+        <li>P0 Highest: 2 business days (critical blockers / sensitive escalations)</li>
+        <li>P1 High: 7 business days</li>
+        <li>P2 Medium: 14 business days</li>
+        <li>P3 Low: 21 business days</li>
+        <li>P4 Lowest: no TTR SLA; set customer expectations and solve in Support</li>
+      </ul>
+    </li>
+    <li>
+      Board-specific reminders:
+      <ul>
+        <li>Bill / Monetization: Cursor Bot or Billing Bot thread is mandatory.</li>
+        <li>FLEX: choose the correct Benefits project and issue type Customer Task.</li>
+        <li>Tax (PF): title as USGP or Legacy // Account name // short description. CTI and Lead who approved the ticket are required.</li>
+        <li>Payment Ops: include COID, money flow / order ID(s), amount &amp; currency.</li>
+      </ul>
+    </li>
+    <li>Reset clears the current form only. Switching boards keeps shared values such as Company ID when the field IDs match.</li>
+    <li>If a product grid requires extra ENG fields, put them in Product-Specific Details so engineering does not have to ask for a follow-up.</li>
+  </ol>
+</div>
