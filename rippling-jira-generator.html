@@ -1709,7 +1709,7 @@
                 }
                 if (!value) return;
                 if (value === 'n/a') return;
-                if ((field.id === 'officehours' || field.id === 'workaround' || field.id === 'escalated' || field.id === 'peoCustomer' || field.id === 'peoEor' || field.id === 'confluenceReferred') && value === 'No') return;
+                if ((field.id === 'officehours' || field.id === 'workaround' || field.id === 'escalated' || field.id === 'peoCustomer' || field.id === 'peoEor') && value === 'No') return;
                 if (value.indexOf('[action]') !== -1 || value.indexOf('[expected outcome]') !== -1) return;
                 addItem(label, value);
             });
