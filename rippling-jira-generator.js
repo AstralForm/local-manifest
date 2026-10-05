@@ -99,6 +99,48 @@ function checkboxes(id, label, options, extra) {
     return Object.assign({ id: id, label: label, type: 'checkboxes', options: options, compileStyle: 'checklist' }, extra || {});
 }
 
+function aopsTitleFields(placeholder) {
+    return [
+        area('jiraTitle', 'Jira Title', {
+            rows: 2,
+            section: 'Jira Title',
+            hint: 'Client Name | Brief description of issue // For reference or Not For reference',
+            placeholder: placeholder || 'Example: Acme Corp | Brief description of issue'
+        }),
+        selectField('referenceFlag', 'For reference or Not For reference', ['For reference', 'Not For reference'], {
+            defaultValue: 'For reference',
+            skipCompile: true,
+            tooltip: 'This suffix is added to the Jira title for every AOPS ticket.'
+        })
+    ];
+}
+
+function amountCategoryFields(amountId, amountLabel, amountHint) {
+    return [
+        text(amountId, amountLabel, {
+            section: '4. Amount',
+            compileSection: '4. Amount',
+            hint: amountHint,
+            placeholder: 'Example: $2,500'
+        }),
+        {
+            id: 'amountCategoryTable',
+            type: 'html',
+            skipCompile: true,
+            section: 'Amount Category',
+            html: '<div class="html-block"><p class="hint">Required approvers are filled from the amount using this matrix.</p><table class="amount-table"><thead><tr><th>Amount</th><th>Required Approvers</th></tr></thead><tbody><tr><td>Under $1,000</td><td>No approver needed</td></tr><tr><td>$1,000 – $5,000</td><td>Requester\'s Manager</td></tr><tr><td>$5,000 – $10,000</td><td>Requester\'s Manager + Director</td></tr><tr><td>$10,000 – $50,000</td><td>Requester\'s Manager + Director + VP</td></tr><tr><td>$50,000+</td><td>Requester\'s Manager + Director + VP + Vipin Sethi (Accounting)</td></tr></tbody></table></div>'
+        },
+        selectField('amountCategory', 'Amount Category', AMOUNT_CATEGORIES.map(function (band) { return band.label; }), {
+            hideLabel: true
+        }),
+        text('requiredApprovers', 'Required Approvers', {
+            defaultValue: '',
+            readOnly: true,
+            tooltip: 'Auto-filled from the amount / amount category.'
+        })
+    ];
+}
+
 function bexcAccountFields(troubleshootingHint) {
     return [
         text('companyID', 'CID', {
@@ -402,11 +444,11 @@ const BOARDS = [
     {
         id: 'aops-invoice-waiver',
         name: 'AOPS - Invoice Waiver',
+        aops: true,
         help: 'File on the AOPS board. Use this format to request waiving customer invoices, including amount category and required approvers.',
-        titleHint: 'Client Name | Brief description of issue',
+        titleHint: 'Client Name | Brief description of issue // For reference or Not For reference',
         titlePlaceholder: 'Example: Acme Corp | Waive duplicate September platform invoice',
-        fields: [
-            area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
+        fields: aopsTitleFields('Example: Acme Corp | Waive duplicate September platform invoice').concat([
             area('whatIsHappening', 'What is happening', {
                 section: '1. Issue Description',
                 compileSection: '1. Issue Description',
@@ -414,36 +456,77 @@ const BOARDS = [
                 hint: 'Please clarify why we need to waive the invoices for the customer and what occurred that we need to waive these invoices.',
                 placeholder: 'Example: Customer was billed twice for the September platform fee after a contract correction. AM approved waiving the duplicate invoice.'
             })
-        ].concat(bexcAccountFields('Share the steps taken so far and confirm whether you have received approval from the AM or the relevant team to waive the invoices. Attach the Slack thread confirmation or a screenshot of the AM\'s approval.')).concat([
-            text('waiverAmount', 'Waiver amount', {
-                section: '4. Waiver Details',
-                compileSection: '4. Waiver Details',
-                hint: 'Please mention the amount that needs to be waived.',
-                placeholder: 'Example: $2,500'
-            }),
-            {
-                id: 'amountCategoryTable',
-                type: 'html',
-                skipCompile: true,
-                section: 'Amount Category',
-                html: '<div class="html-block"><p class="hint">Required approvers are filled from the waiver amount using this matrix.</p><table class="amount-table"><thead><tr><th>Amount</th><th>Required Approvers</th></tr></thead><tbody><tr><td>Under $1,000</td><td>No approver needed</td></tr><tr><td>$1,000 – $5,000</td><td>Requester\'s Manager</td></tr><tr><td>$5,000 – $10,000</td><td>Requester\'s Manager + Director</td></tr><tr><td>$10,000 – $50,000</td><td>Requester\'s Manager + Director + VP</td></tr><tr><td>$50,000+</td><td>Requester\'s Manager + Director + VP + Vipin Sethi (Accounting)</td></tr></tbody></table></div>'
-            },
-            selectField('amountCategory', 'Amount Category', AMOUNT_CATEGORIES.map(function (band) { return band.label; }), {
-                hideLabel: true
-            }),
-            text('requiredApprovers', 'Required Approvers', {
-                defaultValue: '',
-                readOnly: true,
-                tooltip: 'Auto-filled from the waiver amount / amount category.'
-            }),
+        ]).concat(bexcAccountFields('Share the steps taken so far and confirm whether you have received approval from the AM or the relevant team to waive the invoices. Attach the Slack thread confirmation or a screenshot of the AM\'s approval.')).concat(amountCategoryFields('waiverAmount', 'Waiver amount', 'Please mention the amount that needs to be waived.')).concat([
             area('whyDebitedAndWaiving', 'Why were the charges initially debited, and why are we waiving them now?', {
-                section: '5. Action Required from Engineering',
-                compileSection: '5. Action Required from Engineering',
+                section: '5. Action Required',
+                compileSection: '5. Action Required',
                 compileIntro: 'This Jira is for reference.',
                 hint: 'This Jira is for reference. Explain why the charges were initially debited and why they are being waived now.'
             }),
-            area('underlyingIssueSteps', 'What steps are being taken to address and resolve the underlying issue that led to the waiver of invoices?', {
+            area('underlyingIssueSteps', 'How we are fixing the issue (the problem that led to the waiver)', {
                 hint: 'Describe the fix or process change so this does not recur.'
+            }),
+            selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                defaultValue: 'No',
+                skipCompile: true
+            })
+        ])
+    },
+    {
+        id: 'aops-one-time-refund',
+        name: 'AOPS - One-Time Refund',
+        aops: true,
+        help: 'File on the AOPS board for a one-time customer refund. Include AM approval (Slack thread or screenshot) and the refund amount category.',
+        titleHint: 'Client Name | Brief description of issue // For reference or Not For reference',
+        titlePlaceholder: 'Example: Acme Corp | Duplicate platform fee refund',
+        fields: aopsTitleFields('Example: Acme Corp | Duplicate platform fee refund').concat([
+            area('whatIsHappening', 'What is happening', {
+                section: '1. Issue Description',
+                compileSection: '1. Issue Description',
+                compileLabel: 'What is happening',
+                hint: 'Please clarify why we need to issue a refund to the customer and what occurred that led to the refund being processed.',
+                rows: 6
+            })
+        ]).concat(bexcAccountFields('Share the steps taken so far and confirm whether you have received approval from the AM or the relevant team to issue the refund. Attach the Slack thread confirmation or a screenshot of the AM\'s approval.')).concat(amountCategoryFields('refundAmount', 'Refund Amount', 'Please mention the amount that needs to be refunded.')).concat([
+            area('whyDebitedAndWaiving', 'Why the charges were debited and why we are now refunding them', {
+                section: '5. Action Required',
+                compileSection: '5. Action Required',
+                compileIntro: 'This Jira is for reference.',
+                hint: 'This Jira is for reference.'
+            }),
+            area('underlyingIssueSteps', 'How we are fixing the issue (the problem that led to the refund)', {
+                rows: 5
+            }),
+            selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                defaultValue: 'No',
+                skipCompile: true
+            })
+        ])
+    },
+    {
+        id: 'aops-one-time-charge',
+        name: 'AOPS - One-Time Charge',
+        aops: true,
+        help: 'File on the AOPS board for a one-time customer charge. Include AM approval (Slack thread or screenshot) and the charge amount category.',
+        titleHint: 'Client Name | Brief description of issue // For reference or Not For reference',
+        titlePlaceholder: 'Example: Acme Corp | Back-bill missed platform fee',
+        fields: aopsTitleFields('Example: Acme Corp | Back-bill missed platform fee').concat([
+            area('whatIsHappening', 'What is happening', {
+                section: '1. Issue Description',
+                compileSection: '1. Issue Description',
+                compileLabel: 'What is happening',
+                hint: 'Please clarify why we need to issue a charge to the customer and what occurred that led to the charge being processed.',
+                rows: 6
+            })
+        ]).concat(bexcAccountFields('Share the steps taken so far and confirm whether you have received approval from the AM or the relevant team to issue the charge. Attach the Slack thread confirmation or a screenshot of the AM\'s approval.')).concat(amountCategoryFields('chargeAmount', 'Charge Amount', 'Please mention the amount that needs to be charged.')).concat([
+            area('whyDebitedAndWaiving', 'Why are we charging them?', {
+                section: '5. Action Required',
+                compileSection: '5. Action Required',
+                compileIntro: 'This Jira is for reference.',
+                hint: 'This Jira is for reference.'
+            }),
+            area('underlyingIssueSteps', 'How we are fixing the issue (the problem that led to the charge)', {
+                rows: 5
             }),
             selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
                 defaultValue: 'No',
@@ -1033,7 +1116,9 @@ function syncConditionals(board) {
 }
 
 function syncWaiverCategory() {
-    const amountInput = document.getElementById('waiverAmount');
+    const amountInput = document.getElementById('waiverAmount')
+        || document.getElementById('refundAmount')
+        || document.getElementById('chargeAmount');
     const categoryInput = document.getElementById('amountCategory');
     const approversInput = document.getElementById('requiredApprovers');
     if (!amountInput || !categoryInput || !approversInput) return;
@@ -1088,7 +1173,7 @@ function bindBoardEvents(board) {
         const handler = function () {
             savedValues[field.id] = input.type === 'checkbox' ? (input.checked ? 'Yes' : 'No') : input.value;
             if (field.id === 'confirmation') checkConfirmationStatus();
-            if (field.id === 'waiverAmount') syncWaiverCategory();
+                    if (field.id === 'waiverAmount' || field.id === 'refundAmount' || field.id === 'chargeAmount') syncWaiverCategory();
             if (field.id === 'amountCategory') syncApproversFromCategory();
             if (field.id === 'engExpectedOutcome') syncEngSentence();
             syncConditionals(board);
@@ -1216,6 +1301,10 @@ function buildTicket(board) {
         if (field.id === 'jiraTitle') {
             const inputElement = document.getElementById(field.id);
             title = inputElement ? inputElement.value.trim() : '';
+            const flag = document.getElementById('referenceFlag');
+            if (board.aops && flag && flag.value.trim() && title) {
+                title = title + ' // ' + flag.value.trim();
+            }
             return;
         }
 
@@ -1224,7 +1313,12 @@ function buildTicket(board) {
             ensureSection(heading);
         }
         if (field.compileIntro) {
-            addItem('Note', field.compileIntro);
+            const flag = document.getElementById('referenceFlag');
+            if (flag && flag.value.trim() === 'Not For reference') {
+                addItem('Note', 'This Jira is not for reference.');
+            } else {
+                addItem('Note', field.compileIntro);
+            }
         }
 
         const label = field.compileLabel || field.label || '';

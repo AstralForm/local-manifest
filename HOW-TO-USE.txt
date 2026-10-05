@@ -1,0 +1,90 @@
+Rippling Jira Generator
+=======================
+
+Description
+-----------
+This tool helps Rippling ops, support, and payroll teams write complete Jira tickets
+without rebuilding the description from scratch each time.
+
+Open rippling-jira-generator.html in a browser (keep the .html, .css, and .js files
+in the same folder). Choose a Jira board / ticket type. The form and live Preview
+switch to that board’s required fields. When the intake is complete, copy the
+formatted description into Jira.
+
+Templates included
+------------------
+- Rippling Standard template
+- Global Payroll
+- AOPS - Invoice Waiver
+- AOPS - One-Time Refund
+- AOPS - One-Time Charge
+- BEXC — Account exemptions
+- Bill - Monetization Platform
+- Payment Ops (PO - JIRA)
+- FLEX JIRA
+- Tax Specific (PF JIRA)
+
+When no board is selected, the page shows SLAs vs Priority (TTR by P0–P4).
+
+Tips on how to use this template
+--------------------------------
+1. Keep all three files together:
+   - rippling-jira-generator.html
+   - rippling-jira-generator.css
+   - rippling-jira-generator.js
+
+2. Open the HTML file in Chrome or another modern browser. You do not need a server.
+
+3. Select the Jira board that matches the work. Do not mix formats (for example,
+   do not use Global Payroll for an AOPS refund).
+
+4. Fill every required field for that board. Empty fields are left out of Preview
+   on purpose so the ticket stays clean.
+
+5. AOPS titles must follow:
+   Client Name | Brief description of issue // For reference or Not For reference
+   Use the title box for "Client Name | Brief description", then pick
+   For reference / Not For reference from the dropdown. Preview adds the suffix.
+
+6. For AOPS waiver / refund / charge, enter the dollar amount. Amount Category and
+   Required Approvers fill from this matrix:
+   - Under $1,000: no extra approver
+   - $1,000 – $5,000: Requester's Manager
+   - $5,000 – $10,000: Requester's Manager + Director
+   - $10,000 – $50,000: Requester's Manager + Director + VP
+   - $50,000+: Requester's Manager + Director + VP + Vipin Sethi (Accounting)
+   Attach AM approval (Slack thread or screenshot) in troubleshooting.
+
+7. Checkboxes (LogRocket, debugger, screenshots, demo, playbooks, Risk Eval)
+   only show follow-up fields when checked. Check them when you actually did
+   that pre-check.
+
+8. Set "Have you included all requested information?" to Yes before Create Jira
+   Text. That confirmation is a quality gate and is not pasted into Jira.
+
+9. Use the Preview tab to confirm numbered headings and "Label: value" bullets
+   look like a real Jira description.
+
+10. Click Copy for Jira, then paste into Jira with Command+V (Mac) or Ctrl+V
+    (Windows). Do not use Shift+Command+V / Ctrl+Shift+V (plain-text paste),
+    or heading formatting is lost.
+
+11. Pick Jira priority to match customer-task SLAs:
+    - P0 Highest: 2 business days (critical blockers / sensitive escalations)
+    - P1 High: 7 business days
+    - P2 Medium: 14 business days
+    - P3 Low: 21 business days
+    - P4 Lowest: no TTR SLA; set customer expectations and solve in Support
+
+12. Board-specific reminders:
+    - Bill / Monetization: Cursor Bot or Billing Bot thread is mandatory.
+    - FLEX: choose the correct Benefits project and issue type Customer Task.
+    - Tax (PF): title as USGP or Legacy // Account name // short description.
+      CTI and Lead who approved the ticket are required.
+    - Payment Ops: include COID, money flow / order ID(s), amount & currency.
+
+13. Reset clears the current form only. Switching boards keeps shared values
+    such as Company ID when the field IDs match.
+
+14. If a product grid requires extra ENG fields, put them in Product-Specific
+    Details so engineering does not have to ask for a follow-up.

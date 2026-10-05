@@ -31,7 +31,41 @@
 
                 <div id="emptyState">
                     <strong>No template selected</strong>
-                    Choose a Jira board above to load the matching intake and live preview.
+                    <p class="empty-lead">Choose a Jira board above to load the matching intake and live preview.</p>
+                    <div class="sla-block">
+                        <h2>SLAs vs Priority</h2>
+                        <p>There are SLAs implemented on each customer task created in engineering Jira boards. These SLAs vary by priority assigned to the Jira ticket.</p>
+                        <table class="sla-table">
+                            <thead>
+                                <tr>
+                                    <th>Priority</th>
+                                    <th>TTR SLA (Internal)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>P0 - Highest (critical blockers listed above / sensitive escalations)</td>
+                                    <td>2 business days</td>
+                                </tr>
+                                <tr>
+                                    <td>P1 - High</td>
+                                    <td>7 business days</td>
+                                </tr>
+                                <tr>
+                                    <td>P2 - Medium</td>
+                                    <td>14 business days</td>
+                                </tr>
+                                <tr>
+                                    <td>P3 - Low</td>
+                                    <td>21 business days</td>
+                                </tr>
+                                <tr>
+                                    <td>P4 - Lowest</td>
+                                    <td>NA (Support should set the right expectations with the customer and solve the case)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 <div id="formRoot"></div>
 
