@@ -429,7 +429,7 @@
         <p class="board-help" id="boardHelp">Select a board to load the matching Jira format.</p>
     </div>
 
-    <div id="emptyState">No board selected yet. Use the dropdown above to load Rippling Standard, Global Payroll, BEXC Invoice Waiver, or BEXC Account Exemptions.</div>
+    <div id="emptyState">No board selected yet. Choose a template from the dropdown to load the matching Jira format.</div>
     <div id="formRoot"></div>
 
     <div id="formActions">
@@ -862,9 +862,9 @@
                 ])
             },
             {
-                id: 'bexc-invoice-waiver',
-                name: 'BEXC — Invoice Waiving off request',
-                help: 'File on the BEXC board. Use this format to request waiving customer invoices, including amount category and required approvers.',
+                id: 'aops-invoice-waiver',
+                name: 'AOPS - Invoice Waiver',
+                help: 'File on the AOPS board. Use this format to request waiving customer invoices, including amount category and required approvers.',
                 titleHint: 'Client Name | Brief description of issue',
                 titlePlaceholder: 'Example: Acme Corp | Waive duplicate September platform invoice',
                 fields: [
@@ -942,6 +942,331 @@
                         skipCompile: true
                     })
                 ])
+            },
+            {
+                id: 'bill-monetization',
+                name: 'Bill - Monetization Platform',
+                help: 'Use this format for Monetization Platform / Billing engineering Jiras. Include the Cursor Bot or Billing Bot thread — that field is mandatory.',
+                titleHint: '{Company Name} // {Very short summary of the issue}',
+                titlePlaceholder: 'Example: Acme Corp // Duplicate September platform invoice',
+                fields: [
+                    area('jiraTitle', 'Jira Title', { rows: 2, section: 'Jira Title' }),
+                    area('issueDescription', 'Issue Description', {
+                        section: '1. Issue Description',
+                        compileSection: '1. Issue Description',
+                        compileLabel: 'Issue Description',
+                        hint: 'Provide a clear description of the issue.',
+                        rows: 6
+                    }),
+                    area('actionReqEng', 'Action Required from Engineering', {
+                        section: '2. Action Required from Engineering',
+                        compileSection: '2. Action Required from Engineering',
+                        compileLabel: 'Action Required from Engineering',
+                        hint: 'Clearly specify what is needed from the Engineering team.',
+                        rows: 5
+                    }),
+                    text('companyID', 'Company ID', {
+                        section: '3. Account & Employee Details',
+                        compileSection: '3. Account & Employee Details'
+                    }),
+                    text('arr', 'ARR'),
+                    text('entityName', 'Entity Name'),
+                    area('affectedPeople', 'Name & Role IDs of affected employee(s)/admin(s), if applicable', { rows: 4 }),
+                    selectField('escalated', 'Escalated Client', ['No', 'Yes'], { defaultValue: 'No' }),
+                    selectField('peoCustomer', 'PEO Customer', ['No', 'Yes'], { defaultValue: 'No' }),
+                    text('logrocketSession', 'LogRocket session reproducing the issue, if applicable', {
+                        section: '4. Troubleshooting Actions Taken So Far',
+                        compileSection: '4. Troubleshooting Actions Taken So Far'
+                    }),
+                    area('proxyDetails', 'Details/screenshots from proxy session', { rows: 4 }),
+                    area('additionalTroubleshooting', 'Additional troubleshooting performed', { rows: 4 }),
+                    text('billingBotThread', 'Cursor Bot/Billing Bot response thread', {
+                        hint: 'Mandatory. Paste the Slack/bot thread that confirms troubleshooting.'
+                    }),
+                    selectField('confluenceReferred', 'Confluence/Help Article/Previous Case Referred', ['No', 'Yes'], {
+                        section: '5. Confluence/Help Article/Previous Case Referred',
+                        compileSection: '5. Confluence/Help Article/Previous Case Referred',
+                        defaultValue: 'No'
+                    }),
+                    area('confluenceDetails', 'Details/link if applicable', {
+                        conditional: true,
+                        dependencyId: 'confluenceReferred',
+                        dependencyValue: 'Yes',
+                        isSubField: true,
+                        rows: 3
+                    }),
+                    selectField('officehours', 'Did you take this to OH or speak with a Lead?', ['No', 'Yes'], {
+                        section: '6. OH/Lead Review',
+                        compileSection: '6. OH/Lead Review',
+                        defaultValue: 'No'
+                    }),
+                    text('ohName', 'Lead who approved the Jira ticket', {
+                        conditional: true,
+                        dependencyId: 'officehours',
+                        dependencyValue: 'Yes',
+                        isSubField: true,
+                        skipCompile: true
+                    }),
+                    selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                        defaultValue: 'No',
+                        skipCompile: true
+                    })
+                ]
+            },
+            {
+                id: 'payment-ops',
+                name: 'Payment Ops (PO - JIRA)',
+                help: 'Use this Payment Ops form for money-movement investigations. File on the PO Jira board.',
+                titleHint: 'Company Name | Type of payment | Short description',
+                titlePlaceholder: 'Example: Acme Corp | ACH | Missing vendor payout',
+                fields: [
+                    area('jiraTitle', 'Summary', { rows: 2, section: 'Summary' }),
+                    text('companyName', 'Company Name', {
+                        section: '1. Payment Details',
+                        compileSection: '1. Payment Details'
+                    }),
+                    text('companyID', 'COID'),
+                    text('paymentType', 'Type of Payment'),
+                    area('beneficiaryNames', 'Beneficiary Name(s) (if applicable)', { rows: 3 }),
+                    area('roleIds', 'Role ID(s) (if applicable)', { rows: 3 }),
+                    text('chargeName', 'Name of Charge'),
+                    text('moneyFlow', 'Money Flow or Order ID(s)'),
+                    text('country', 'Country'),
+                    text('amountCurrency', 'Amount & Currency'),
+                    text('paymentDate', 'Payment Date'),
+                    text('transactionType', 'Transaction Type (if known)'),
+                    text('sfdcCase', 'SFDC Case Link (if applicable)'),
+                    selectField('peoEor', 'PEO/EOR Customer', ['No', 'Yes'], { defaultValue: 'No' }),
+                    area('ask', 'Ask', {
+                        section: '2. Ask',
+                        compileSection: '2. Ask',
+                        compileLabel: 'Ask',
+                        hint: 'State the Payment Ops / Engineering ask clearly.',
+                        rows: 6
+                    }),
+                    selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                        defaultValue: 'No',
+                        skipCompile: true
+                    })
+                ]
+            },
+            {
+                id: 'flex-jira',
+                name: 'FLEX JIRA',
+                issueType: 'Customer Task',
+                help: 'File in the Benefits space as issue type Customer Task > Review and Create. Choose the correct Jira project, then complete the standard body plus Flex-specific fields.',
+                titleHint: 'Client Name | Brief description of issue',
+                titlePlaceholder: 'Example: Acme Corp | HSA deduction missing after QLE',
+                fields: [
+                    selectField('flexProject', 'Jira Project (Product Area)', [
+                        '',
+                        'Ben Admin - Employee',
+                        'Ben Admin - Employer',
+                        'Benefits Marketplace',
+                        'EDI/API',
+                        'Infrastructure',
+                        'Benefits Flex',
+                        'Benefits Financial Platform',
+                        'Benefits Compliance'
+                    ], {
+                        section: 'Project',
+                        compileSection: 'Project',
+                        compileLabel: 'Jira Project',
+                        tooltip: 'Ben Admin - Employee: EE enrollment/EOI/QLE. Employer: company level. Marketplace: integrations/forms. EDI/API: products & partners / add carriers to OE. Infrastructure: IM issues. Benefits Flex: HSA/FSA/Commuter. Financial Platform: HSA/FSA/Commuter deductions. Compliance: ACA/COBRA.'
+                    }),
+                    {
+                        id: 'flexProjectHelp',
+                        type: 'html',
+                        skipCompile: true,
+                        html: '<p class="hint">Ben Admin - Employee: enrollment/EOI/QLE. Ben Admin - Employer: company level. Benefits Marketplace: integrations/forms. EDI/API: products &amp; partners. Infrastructure: IM issues. Benefits Flex: HSA/FSA/Commuter. Benefits Financial Platform: deduction issues. Benefits Compliance: ACA/COBRA.</p>'
+                    },
+                    area('jiraTitle', 'Jira Title', { rows: 3, section: 'Jira Title' }),
+                    area('whatIsHappening', 'What is happening', {
+                        section: '1. Issue Description',
+                        compileSection: '1. Issue Description',
+                        compileLabel: 'What is happening',
+                        hint: 'Observable system (error messages, incorrect output, unexpected system behavior)'
+                    }),
+                    area('whenItHappens', 'When it happens', {
+                        compileLabel: 'When it happens',
+                        hint: 'Trigger conditions (what specific app/payroll run/employee is impacted and what actions are triggering the system behavior)'
+                    }),
+                    area('whatShouldHappen', 'What should happen', {
+                        compileLabel: 'What should happen',
+                        hint: 'Correct system behavior, confirmed via demo, playbooks, or HC articles'
+                    }),
+                    text('companyID', 'Company ID', {
+                        section: '2. Account Details',
+                        compileSection: '2. Account Details'
+                    }),
+                    text('country', 'Country the run belongs to'),
+                    text('arr', 'ARR'),
+                    text('entityName', 'Entity Name'),
+                    area('affectedPeople', 'Name & Role IDs of affected employee(s) / admin(s), if applicable', { rows: 4 }),
+                    selectField('eeOrContractor', 'Is this an Employee/Contractor?', ['', 'Employee', 'Contractor', 'Admin', 'Both / multiple', 'n/a']),
+                    area('payrunLink', 'Link to payrun with payrun ID and Check Date of Run', { rows: 3 }),
+                    selectField('escalated', 'Escalated client', ['No', 'Yes'], { defaultValue: 'No' }),
+                    selectField('peoCustomer', 'PEO Customer', ['No', 'Yes'], { defaultValue: 'No' }),
+                    {
+                        id: 'troubleshootingIntro',
+                        type: 'html',
+                        skipCompile: true,
+                        section: '3. Troubleshooting Actions Taken So Far',
+                        html: '<p class="hint">Complete each applicable pre-check. Follow-up fields appear when a box is checked.</p>'
+                    },
+                    checkbox('tsLogrocket', 'LogRocket reviewed', {
+                        compileSection: '3. Troubleshooting Actions Taken So Far'
+                    }),
+                    text('logrocketLink', 'LogRocket link attached with support screenshots', {
+                        conditional: true, dependencyId: 'tsLogrocket', dependencyValue: 'Yes', isSubField: true
+                    }),
+                    text('logrocketTime', 'Confirm the time to review on the LogRocket recording', {
+                        conditional: true, dependencyId: 'tsLogrocket', dependencyValue: 'Yes', isSubField: true
+                    }),
+                    checkbox('tsDebugger', 'Debugger reviewed'),
+                    selectField('employeeDebugger', 'Employee debugger', ['', 'Yes', 'No', 'n/a'], {
+                        conditional: true, dependencyId: 'tsDebugger', dependencyValue: 'Yes', isSubField: true
+                    }),
+                    selectField('companyDebugger', 'Company debugger', ['', 'Yes', 'No', 'n/a'], {
+                        conditional: true, dependencyId: 'tsDebugger', dependencyValue: 'Yes', isSubField: true
+                    }),
+                    area('debuggerFindings', 'Key findings summarized with screenshots to support', {
+                        conditional: true, dependencyId: 'tsDebugger', dependencyValue: 'Yes', isSubField: true, rows: 4
+                    }),
+                    checkbox('tsScreenshots', 'Screenshots captured'),
+                    area('screenshotFrontEnd', 'Front End view of Error state / incorrect output', {
+                        conditional: true, dependencyId: 'tsScreenshots', dependencyValue: 'Yes', isSubField: true, rows: 4
+                    }),
+                    area('screenshotFindings', 'Key findings summarized', {
+                        conditional: true, dependencyId: 'tsScreenshots', dependencyValue: 'Yes', isSubField: true, rows: 4
+                    }),
+                    checkbox('tsDemo', 'Tested on Demo Account'),
+                    selectField('demoRecreated', 'Were you able to recreate the situation on your demo', ['', 'Yes', 'No'], {
+                        conditional: true, dependencyId: 'tsDemo', dependencyValue: 'Yes', isSubField: true
+                    }),
+                    selectField('companyOrGeneral', 'Confirm if Company specific or General system functionality', ['', 'Company specific', 'General system functionality', 'Unknown'], {
+                        conditional: true, dependencyId: 'tsDemo', dependencyValue: 'Yes', isSubField: true
+                    }),
+                    checkbox('tsPlaybooks', 'Playbooks/Help Center/Confluence review'),
+                    area('playbookContent', 'Confirm the relevant content used to support your findings', {
+                        conditional: true, dependencyId: 'tsPlaybooks', dependencyValue: 'Yes', isSubField: true, rows: 4
+                    }),
+                    checkbox('tsRiskEval', 'Risk Eval ID'),
+                    text('riskEvalId', 'Risk Eval ID', {
+                        conditional: true, dependencyId: 'tsRiskEval', dependencyValue: 'Yes', isSubField: true,
+                        hint: 'Relevant for banking expediting requests approved by the risk team'
+                    }),
+                    checkboxes('engAskTypes', 'Pick the relevant ask types', [
+                        'Fix a bug',
+                        'Investigate root cause',
+                        'Confirm expected behavior',
+                        'Data correction'
+                    ], {
+                        section: '4. Action Required from Engineering',
+                        compileSection: '4. Action Required from Engineering',
+                        compileLabel: 'Ask types'
+                    }),
+                    area('engExpectedOutcome', 'Expected outcome', { rows: 3 }),
+                    text('engSentence', 'Required sentence', { readOnly: true }),
+                    selectField('officehours', 'Did you take this to OH or speak with a Lead?', ['No', 'Yes'], { defaultValue: 'No' }),
+                    text('ohName', 'Who was the Lead who approved the Jira ticket?', {
+                        conditional: true, dependencyId: 'officehours', dependencyValue: 'Yes', isSubField: true, skipCompile: true
+                    }),
+                    selectField('flexComponent', 'Components', [
+                        '',
+                        'Benefits - Flex',
+                        '1P-Flex (Elevate-issued cards)',
+                        '3P-Flex (Wex, Navia, or other third-party)'
+                    ], {
+                        section: '5. Product-Specific Details',
+                        compileSection: '5. Product-Specific Details',
+                        compileLabel: 'Components'
+                    }),
+                    selectField('criticalBlocker', 'Critical Blocker?', ['', 'No', 'Yes', 'Unsure — ask a Lead/Supervisor']),
+                    selectField('churnRisk', 'Customer Churn Risk', ['No risk Forecasted', 'Churn risk', 'Unknown'], {
+                        defaultValue: 'No risk Forecasted',
+                        hint: 'Use No risk Forecasted unless the client, AM, or TAM has explicitly flagged churn for this issue.'
+                    }),
+                    selectField('businessImpact', 'Business Impact', ['', 'High', 'Low'], {
+                        hint: 'High: large number of EEs, widespread issue, churn risk/escalated. Low: everything else.'
+                    }),
+                    area('productSpecificDetails', 'Additional product details', { rows: 4 }),
+                    selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                        defaultValue: 'No',
+                        skipCompile: true
+                    })
+                ]
+            },
+            {
+                id: 'pf-tax',
+                name: 'Tax Specific (PF JIRA)',
+                help: 'Use this USGP / Legacy tax format. Title as USGP or Legacy // Account name // Short description. CTI and Lead approval are required.',
+                titleHint: 'USGP or Legacy // Account name // Short Description of Issue',
+                titlePlaceholder: 'Example: USGP // Acme Corp // Incorrect FIT withholding after supplemental run',
+                fields: [
+                    area('jiraTitle', 'Summary / Jira ticket title', { rows: 2, section: 'Jira Title' }),
+                    area('issueDescription', 'Issue Description', {
+                        section: '1. Issue Description',
+                        compileSection: '1. Issue Description',
+                        compileLabel: 'Issue Description',
+                        rows: 6
+                    }),
+                    text('companyID', 'Company ID', {
+                        section: '2. Account and EE Details',
+                        compileSection: '2. Account and EE Details'
+                    }),
+                    text('cti', 'CTI', {
+                        hint: 'Mandatory. Use the CTI Loom/guide to find this value.'
+                    }),
+                    text('arr', 'ARR'),
+                    text('firstCheckDate', 'First Check Date'),
+                    text('entityName', 'Entity Name'),
+                    area('affectedPeople', 'Name and Role IDs of affected employee(s) or admin(s), if applicable', { rows: 4 }),
+                    selectField('eeOrContractor', 'Employee or contractor status', ['', 'Employee', 'Contractor', 'Admin', 'Both / multiple', 'n/a']),
+                    text('payrunId', 'Payrun ID'),
+                    selectField('escalated', 'Escalated client', ['No', 'Yes'], { defaultValue: 'No' }),
+                    selectField('peoCustomer', 'PEO Customer', ['No', 'Yes'], { defaultValue: 'No' }),
+                    text('peoStatus', 'Active/ex-PEO status and joining or termination context', {
+                        conditional: true,
+                        dependencyId: 'peoCustomer',
+                        dependencyValue: 'Yes',
+                        isSubField: true
+                    }),
+                    area('troubleshooting', 'Troubleshooting actions taken so far', {
+                        section: '3. Troubleshooting Actions Taken So Far',
+                        compileSection: '3. Troubleshooting Actions Taken So Far',
+                        compileLabel: 'Troubleshooting actions taken so far',
+                        hint: 'This should never be blank.',
+                        rows: 6
+                    }),
+                    area('taxShortIds', 'Tax short IDs for tax calculations or tax adjustments', {
+                        hint: 'Use Tax Short IDs - US Taxation and Filings.',
+                        rows: 4
+                    }),
+                    area('actionReqEng', 'Action required from Eng', {
+                        section: '4. Action Required from Engineering',
+                        compileSection: '4. Action Required from Engineering',
+                        compileLabel: 'Action required from Eng',
+                        rows: 5
+                    }),
+                    area('productSpecificDetails', 'Product-Specific Issue Details', {
+                        section: '5. Product-Specific Details',
+                        compileSection: '5. Product-Specific Details',
+                        compileLabel: 'Product-Specific Issue Details',
+                        hint: 'Include when relevant.',
+                        rows: 4
+                    }),
+                    text('ohName', 'Who was the Lead who approved the Jira ticket?', {
+                        section: '6. OH/Lead Review',
+                        compileSection: '6. OH/Lead Review',
+                        compileLabel: 'Lead who approved the Jira ticket',
+                        hint: 'Required.'
+                    }),
+                    selectField('confirmation', 'Have you included all of requested information to create this Jira?', ['No', 'Yes'], {
+                        defaultValue: 'No',
+                        skipCompile: true
+                    })
+                ]
             }
         ];
 
@@ -1384,7 +1709,7 @@
                 }
                 if (!value) return;
                 if (value === 'n/a') return;
-                if ((field.id === 'officehours' || field.id === 'workaround' || field.id === 'escalated' || field.id === 'peoCustomer') && value === 'No') return;
+                if ((field.id === 'officehours' || field.id === 'workaround' || field.id === 'escalated' || field.id === 'peoCustomer' || field.id === 'peoEor' || field.id === 'confluenceReferred') && value === 'No') return;
                 if (value.indexOf('[action]') !== -1 || value.indexOf('[expected outcome]') !== -1) return;
                 addItem(label, value);
             });
