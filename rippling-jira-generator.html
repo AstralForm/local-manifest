@@ -6,65 +6,105 @@
     <title>Rippling Jira Generator</title>
     <style>
         :root {
-            --bg: #f4f5f7;
+            --bg0: #eef2f7;
+            --bg1: #e8eef8;
             --card: #ffffff;
-            --ink: #172b4d;
-            --muted: #5e6c84;
-            --line: #dfe1e6;
-            --accent: #0052cc;
-            --accent-soft: #deebff;
-            --ok: #00875a;
-            --ok-hover: #006644;
-            --danger: #de350b;
-            --danger-hover: #bf2600;
+            --ink: #1b2430;
+            --muted: #5b6777;
+            --line: #e2e8f0;
+            --line-strong: #cbd5e1;
+            --accent: #2563eb;
+            --accent-2: #1d4ed8;
+            --accent-soft: #dbeafe;
+            --ok: #0f9d58;
+            --ok-hover: #0b7a44;
+            --danger: #e11d48;
+            --danger-hover: #be123c;
             --heading: 16px;
             --sub: 14px;
-            --body: 12px;
-            --shadow: 0 1px 1px rgba(9, 30, 66, 0.13), 0 0 1px rgba(9, 30, 66, 0.13);
-            --shadow-lg: 0 8px 16px rgba(9, 30, 66, 0.12);
-            --radius: 10px;
+            --body: 13px;
+            --ticket: 12px;
+            --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.06);
+            --radius: 14px;
         }
 
         * { box-sizing: border-box; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif;
             margin: 0;
-            padding: 28px 20px 48px;
-            background: var(--bg);
+            min-height: 100vh;
             color: var(--ink);
             font-size: var(--body);
-            line-height: 1.45;
+            line-height: 1.5;
+            background:
+                radial-gradient(1200px 500px at 10% -10%, #dbeafe 0%, transparent 55%),
+                radial-gradient(900px 400px at 100% 0%, #f1f5f9 0%, transparent 50%),
+                var(--bg0);
         }
 
         .app-shell {
-            max-width: 880px;
+            max-width: 1280px;
             margin: 0 auto;
+            padding: 28px 20px 48px;
         }
 
         .hero {
-            margin-bottom: 18px;
+            margin-bottom: 22px;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background: var(--accent-soft);
+            color: var(--accent-2);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 5px 9px;
+            border-radius: 999px;
+            margin-bottom: 10px;
         }
 
         .page-title {
-            font-size: 22px;
-            font-weight: 700;
-            margin: 0 0 6px;
-            letter-spacing: -0.02em;
+            font-size: 28px;
+            font-weight: 750;
+            margin: 0 0 8px;
+            letter-spacing: -0.03em;
         }
 
         .page-subtitle {
             color: var(--muted);
             margin: 0;
-            font-size: var(--body);
-            line-height: 1.5;
+            max-width: 62ch;
+            font-size: var(--sub);
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 18px;
+            align-items: start;
+        }
+
+        @media (min-width: 1080px) {
+            .workspace.has-preview {
+                grid-template-columns: minmax(0, 1fr) 440px;
+            }
+
+            .workspace-side {
+                position: sticky;
+                top: 16px;
+                max-height: calc(100vh - 32px);
+                overflow: auto;
+            }
         }
 
         .board-picker,
         #emptyState,
-        #formRoot,
         #formActions,
-        #outputBlock {
+        .workspace-side,
+        .form-section {
             background: var(--card);
             border: 1px solid var(--line);
             border-radius: var(--radius);
@@ -72,55 +112,60 @@
         }
 
         .board-picker {
-            padding: 18px 20px;
-            margin-bottom: 14px;
+            padding: 18px 20px 16px;
         }
 
         .board-picker .gp-label { margin-top: 0; }
 
-        #boardSelect {
-            width: min(420px, 100%);
-            height: 40px;
+        #boardSelect,
+        .gp-input {
+            width: 100%;
+            max-width: none;
+            border: 1px solid var(--line-strong);
+            border-radius: 10px;
+            padding: 9px 12px;
             font-size: var(--body);
-            font-weight: 600;
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            padding: 0 10px;
             color: var(--ink);
+            background: #fff;
+        }
+
+        #boardSelect {
+            height: 42px;
+            font-weight: 650;
         }
 
         .board-help {
             margin: 10px 0 0;
             color: var(--muted);
-            font-size: var(--body);
+            font-size: 12px;
         }
 
         .tooltip {
             position: relative;
             display: inline-block;
-            margin-left: 5px;
+            margin-left: 6px;
             cursor: help;
             color: var(--accent);
-            font-weight: bold;
+            font-weight: 700;
         }
 
         .tooltip .tooltiptext {
             visibility: hidden;
-            width: 360px;
-            background-color: #172b4d;
+            width: 320px;
+            max-width: 70vw;
+            background: #0f172a;
             color: #fff;
             text-align: left;
-            border-radius: 8px;
-            padding: 10px;
+            border-radius: 10px;
+            padding: 10px 12px;
             position: absolute;
-            z-index: 10;
-            bottom: 125%;
-            left: 90%;
+            z-index: 20;
+            bottom: calc(100% + 8px);
+            left: 0;
             opacity: 0;
-            transition: opacity 0.2s;
+            transition: opacity 0.15s;
             font-size: 12px;
-            line-height: 1.4;
-            white-space: normal;
+            line-height: 1.45;
             font-weight: 400;
         }
 
@@ -133,330 +178,355 @@
             font-weight: 700;
             color: var(--ink);
             display: block;
-            margin-top: 14px;
-            margin-bottom: 5px;
+            margin: 0 0 6px;
             font-size: var(--sub);
         }
+
+        .field-block { margin: 0 0 14px; }
+        .field-block .gp-label { margin-top: 0; }
 
         .hint {
             display: block;
             color: var(--muted);
             font-style: italic;
-            margin-bottom: 6px;
-            font-size: var(--body);
-        }
-
-        .section-header {
-            font-size: var(--heading);
-            margin: 28px 0 12px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--line);
-            color: var(--ink);
-            font-weight: 700;
+            margin: 0 0 7px;
+            font-size: 12px;
         }
 
         #formRoot {
-            padding: 8px 22px 22px;
-            margin-bottom: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin: 14px 0;
+            background: transparent;
+            border: 0;
+            box-shadow: none;
+            padding: 0;
         }
 
         #formRoot:empty { display: none; }
 
-        .gp-input {
-            width: 100%;
-            max-width: 520px;
-            padding: 8px 10px;
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            font-size: var(--body);
+        .form-section {
+            padding: 16px 18px 8px;
+        }
+
+        .section-header {
+            font-size: var(--heading);
+            margin: 0 0 14px;
+            padding: 0 0 10px;
+            border-bottom: 1px solid var(--line);
             color: var(--ink);
-            background: #fff;
+            font-weight: 750;
+            letter-spacing: -0.02em;
         }
 
         textarea.gp-input {
-            max-width: 100%;
-            min-height: 88px;
+            min-height: 96px;
             resize: vertical;
+            line-height: 1.45;
         }
 
-        .gp-input[type="text"], select.gp-input {
-            height: 38px;
-        }
-
+        .gp-input[type="text"], select.gp-input { height: 40px; }
         select.gp-input { cursor: pointer; }
 
         .gp-input:focus, #boardSelect:focus, #copyTextArea:focus {
             outline: none;
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-soft);
+            box-shadow: 0 0 0 4px var(--accent-soft);
         }
 
         #formActions {
-            padding: 16px 20px;
-            margin-bottom: 14px;
+            display: none;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 14px 16px;
         }
 
         button {
-            padding: 9px 16px;
-            margin-right: 8px;
+            padding: 10px 16px;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             font-weight: 700;
             font-size: var(--body);
-            transition: background-color 0.15s, transform 0.1s;
+            transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
         }
+
+        button:active { transform: translateY(1px); }
 
         .btn-create { background: var(--ok); color: #fff; }
         .btn-create:hover:not(:disabled) { background: var(--ok-hover); }
-        .btn-create:disabled { background: #b3dfce; color: #f4f4f4; }
-        .btn-reset { background: var(--danger); color: #fff; }
-        .btn-reset:hover { background: var(--danger-hover); }
+        .btn-create:disabled { background: #b7e0c8; color: #f8fafc; }
+        .btn-reset { background: #fff; color: var(--danger); border: 1px solid #fecdd3; }
+        .btn-reset:hover { background: #fff1f2; }
         .btn-copy { background: var(--accent); color: #fff; }
-        .btn-copy:hover { background: #0747a6; }
+        .btn-copy:hover { background: var(--accent-2); }
 
-        .gp-label a { margin-left: 4px; color: var(--accent); text-decoration: none; font-weight: 500; }
+        .gp-label a { margin-left: 4px; color: var(--accent); text-decoration: none; font-weight: 600; }
         .gp-label a:hover { text-decoration: underline; }
 
         .disabled-wrapper { position: relative; display: inline-block; cursor: not-allowed; }
         .disabled-wrapper::after {
-            content: 'Please confirm all data is included.';
+            content: 'Confirm all requested information first.';
             position: absolute;
-            top: -38px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: -40px;
+            left: 0;
             padding: 6px 10px;
-            background: #fffae6;
-            color: #172b4d;
-            border: 1px solid #ffe380;
-            border-radius: 6px;
+            background: #fffbeb;
+            color: #854d0e;
+            border: 1px solid #fde68a;
+            border-radius: 8px;
             white-space: nowrap;
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
             z-index: 100;
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 650;
         }
         .disabled-wrapper:hover::after { opacity: 1; visibility: visible; }
 
-        .sub-field { margin-left: 20px; }
-        .sub-field .gp-input { max-width: 500px; }
+        .sub-field {
+            margin-left: 8px;
+            padding: 10px 12px 2px;
+            border-left: 3px solid var(--accent-soft);
+            background: #f8fbff;
+            border-radius: 0 10px 10px 0;
+        }
 
         .amount-table {
             width: 100%;
-            max-width: 640px;
             border-collapse: collapse;
-            margin: 8px 0 12px;
+            margin: 4px 0 12px;
             font-size: 12px;
+            overflow: hidden;
+            border-radius: 10px;
         }
         .amount-table th, .amount-table td {
             border: 1px solid var(--line);
             padding: 8px 10px;
             text-align: left;
         }
-        .amount-table th { background: #f4f5f7; }
+        .amount-table th { background: #f8fafc; }
 
         .checkbox-row, .checklist-item {
             display: flex;
             align-items: flex-start;
             gap: 8px;
-            margin: 8px 0;
+            margin: 0 0 10px;
         }
+        .checkbox-row { padding: 8px 10px; background: #f8fafc; border-radius: 10px; }
         .checkbox-row input[type="checkbox"],
         .checklist-item input[type="checkbox"] {
             margin-top: 3px;
             width: 16px;
             height: 16px;
             flex-shrink: 0;
+            accent-color: var(--accent);
         }
         .checkbox-row .gp-label { display: inline; margin: 0; }
 
         #emptyState {
-            margin-top: 0;
-            padding: 22px;
+            display: block;
+            padding: 28px 22px;
             color: var(--muted);
+            text-align: center;
+        }
+        #emptyState strong {
+            display: block;
+            color: var(--ink);
+            font-size: var(--heading);
+            margin-bottom: 6px;
         }
 
-        #formActions, #outputBlock { display: none; }
-
-        #outputBlock {
-            padding: 0;
-            overflow: hidden;
-        }
+        #formActions { display: none; }
+        .workspace-side { display: none; padding: 0; overflow: hidden; }
 
         .output-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            padding: 14px 18px 0;
+            padding: 16px 16px 0;
         }
 
-        .output-header .roe-label {
-            margin: 0;
-            font-size: var(--sub);
-        }
+        .output-header .roe-label { margin: 0; }
 
         .output-hint {
             color: var(--muted);
             font-size: 12px;
-            margin: 6px 18px 0;
+            margin: 6px 16px 0;
         }
 
         .tabs {
             display: flex;
-            gap: 0;
-            margin: 14px 18px 0;
-            border-bottom: 2px solid var(--line);
+            gap: 4px;
+            margin: 14px 16px 0;
+            padding: 4px;
+            background: #f1f5f9;
+            border-radius: 12px;
+            border: 0;
         }
 
         .tab-btn {
+            flex: 1;
             background: transparent;
             color: var(--muted);
-            border-radius: 0;
+            border-radius: 9px;
             margin: 0;
-            padding: 10px 16px;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -2px;
+            padding: 8px 12px;
             font-weight: 700;
         }
 
-        .tab-btn:hover { background: #f4f5f7; color: var(--ink); }
+        .tab-btn:hover { background: #fff; color: var(--ink); }
         .tab-btn.active {
-            color: var(--accent);
-            border-bottom-color: var(--accent);
-            background: transparent;
+            color: var(--accent-2);
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
         }
 
-        .tab-panel { display: none; padding: 16px 18px 20px; }
+        .tab-panel { display: none; padding: 14px 16px 16px; }
         .tab-panel.active { display: block; }
 
         .ticket-card {
             background: #fff;
             border: 1px solid var(--line);
             border-radius: 12px;
-            padding: 22px 24px 10px;
-            box-shadow: var(--shadow-lg);
+            padding: 18px 18px 8px;
         }
 
         .ticket-kicker {
             font-size: 11px;
             font-weight: 700;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.05em;
             text-transform: uppercase;
             color: var(--muted);
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .ticket-title {
-            font-size: 16px;
-            font-weight: 700;
-            margin: 0 0 6px;
+            font-size: var(--heading);
+            font-weight: 750;
+            margin: 0 0 4px;
             color: var(--ink);
         }
 
         .ticket-meta {
-            font-size: 12px;
+            font-size: var(--ticket);
             color: var(--muted);
-            margin-bottom: 18px;
+            margin: 0 0 14px;
         }
 
         .ticket-card h2 {
-            font-size: 16px;
-            font-weight: 700;
-            margin: 22px 0 8px;
+            font-size: var(--heading);
+            font-weight: 750;
+            margin: 18px 0 8px;
             color: var(--ink);
         }
 
-        .ticket-card h2:first-of-type { margin-top: 8px; }
+        .ticket-card h2:first-of-type { margin-top: 4px; }
 
         .ticket-card ul {
-            margin: 0 0 8px;
+            margin: 0 0 6px;
             padding-left: 18px;
         }
 
         .ticket-card li {
-            font-size: 12px;
+            font-size: var(--ticket);
             margin: 0 0 8px;
             line-height: 1.5;
-            color: #253858;
+            color: #334155;
         }
 
         .ticket-card li strong {
-            font-size: 12px;
+            font-size: var(--ticket);
             color: var(--ink);
         }
 
         .ticket-empty {
             color: var(--muted);
             font-style: italic;
-            padding: 24px 8px;
+            padding: 18px 4px;
         }
 
         #copyTextArea {
             width: 100%;
-            min-height: 320px;
+            min-height: 280px;
             border: 1px solid var(--line);
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 12px;
             font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
             font-size: 12px;
             line-height: 1.5;
-            background: #fafbfc;
+            background: #f8fafc;
             resize: vertical;
         }
 
         #compiledTextArea { display: none; }
+
+        @media (max-width: 720px) {
+            .page-title { font-size: 24px; }
+            .output-header { flex-direction: column; align-items: flex-start; }
+            .tooltip .tooltiptext { left: -80px; }
+        }
     </style>
 </head>
 <body>
     <div class="app-shell">
-    <div class="hero">
-    <h1 class="page-title">Rippling Jira Generator</h1>
-    <p class="page-subtitle">
-        Choose a Jira board, fill the intake, then use the Preview tab to review the ticket before copying it into Jira.
-    </p>
-    </div>
+        <header class="hero">
+            <span class="hero-badge">Rippling ops</span>
+            <h1 class="page-title">Jira Generator</h1>
+            <p class="page-subtitle">
+                Pick a board, complete the intake, then preview the ticket on the right before copying it into Jira.
+            </p>
+        </header>
 
-    <div class="board-picker">
-        <label for="boardSelect" class="gp-label">Jira board / ticket type
-            <div class="tooltip">ⓘ
-                <span class="tooltiptext">Pick the board you will file in. Each option loads a different field layout and output template.</span>
+        <div class="workspace" id="workspace">
+            <div class="workspace-main">
+                <div class="board-picker">
+                    <label for="boardSelect" class="gp-label">Jira board / ticket type
+                        <div class="tooltip">ⓘ
+                            <span class="tooltiptext">Pick the board you will file in. Each option loads a different field layout and output template.</span>
+                        </div>
+                    </label>
+                    <select id="boardSelect" class="gp-input"></select>
+                    <p class="board-help" id="boardHelp">Select a board to load the matching Jira format.</p>
+                </div>
+
+                <div id="emptyState">
+                    <strong>No template selected</strong>
+                    Choose a Jira board above to load the matching intake and live preview.
+                </div>
+                <div id="formRoot"></div>
+
+                <div id="formActions">
+                    <span id="createButtonWrapper" class="disabled-wrapper">
+                        <button type="button" class="btn-create" id="createButton">Create Jira Text</button>
+                    </span>
+                    <button type="button" class="btn-reset" id="resetButton">Reset</button>
+                </div>
             </div>
-        </label>
-        <select id="boardSelect" class="gp-input"></select>
-        <p class="board-help" id="boardHelp">Select a board to load the matching Jira format.</p>
-    </div>
 
-    <div id="emptyState">No board selected yet. Choose a template from the dropdown to load the matching Jira format.</div>
-    <div id="formRoot"></div>
-
-    <div id="formActions">
-        <span id="createButtonWrapper" class="disabled-wrapper">
-            <button type="button" class="btn-create" id="createButton">Create Jira Text</button>
-        </span>
-        <button type="button" class="btn-reset" id="resetButton">Reset</button>
-    </div>
-
-    <div id="outputBlock">
-        <div class="output-header">
-            <label class="roe-label">Generated Jira</label>
-            <button type="button" class="btn-copy" id="copyButton">Copy for Jira</button>
+            <aside class="workspace-side" id="outputBlock">
+                <div class="output-header">
+                    <label class="roe-label">Generated Jira</label>
+                    <button type="button" class="btn-copy" id="copyButton">Copy for Jira</button>
+                </div>
+                <p class="output-hint">Preview matches the Jira description layout. Use Copy for Jira, then paste with Command+V — not Shift+Command+V.</p>
+                <div class="tabs" role="tablist">
+                    <button type="button" class="tab-btn active" data-tab="preview" id="tabPreview">Preview</button>
+                    <button type="button" class="tab-btn" data-tab="copy" id="tabCopy">Copy text</button>
+                </div>
+                <div class="tab-panel active" id="panelPreview">
+                    <div id="compiledPreview" class="ticket-card" aria-label="Jira preview"></div>
+                </div>
+                <div class="tab-panel" id="panelCopy">
+                    <textarea id="copyTextArea" spellcheck="false" aria-label="Jira copy text"></textarea>
+                </div>
+                <textarea id="compiledTextArea" rows="10" aria-hidden="true"></textarea>
+            </aside>
         </div>
-        <p class="output-hint">Preview shows how the ticket will look. Copy for Jira uses formatted paste — do not use Shift+Command+V.</p>
-        <div class="tabs" role="tablist">
-            <button type="button" class="tab-btn active" data-tab="preview" id="tabPreview">Preview</button>
-            <button type="button" class="tab-btn" data-tab="copy" id="tabCopy">Copy text</button>
-        </div>
-        <div class="tab-panel active" id="panelPreview">
-            <div id="compiledPreview" class="ticket-card" aria-label="Jira preview"></div>
-        </div>
-        <div class="tab-panel" id="panelCopy">
-            <textarea id="copyTextArea" spellcheck="false" aria-label="Jira copy text"></textarea>
-        </div>
-        <textarea id="compiledTextArea" rows="10" aria-hidden="true"></textarea>
-    </div>
     </div>
 
     <script>
@@ -1357,7 +1427,7 @@
         function renderField(field) {
             const wrap = document.createElement('div');
             wrap.id = fieldWrapperId(field);
-            if (field.isSubField) wrap.className = 'sub-field';
+            wrap.className = 'field-block' + (field.isSubField ? ' sub-field' : '');
             if (field.conditional) wrap.style.display = 'none';
 
             if (field.type === 'html') {
@@ -1368,7 +1438,6 @@
 
             if (field.type === 'checkbox') {
                 wrap.classList.add('checkbox-row');
-                if (field.isSubField) wrap.classList.add('sub-field');
                 const input = document.createElement('input');
                 input.type = 'checkbox';
                 input.id = field.id;
@@ -1573,6 +1642,7 @@
             const actions = document.getElementById('formActions');
             const output = document.getElementById('outputBlock');
             const help = document.getElementById('boardHelp');
+            const workspace = document.getElementById('workspace');
             formRoot.innerHTML = '';
 
             const board = getBoard(boardId);
@@ -1580,14 +1650,16 @@
                 emptyState.style.display = 'block';
                 actions.style.display = 'none';
                 output.style.display = 'none';
+                if (workspace) workspace.classList.remove('has-preview');
                 help.textContent = 'Select a board to load the matching Jira format.';
                 document.title = 'Rippling Jira Generator';
                 return;
             }
 
             emptyState.style.display = 'none';
-            actions.style.display = 'block';
+            actions.style.display = 'flex';
             output.style.display = 'block';
+            if (workspace) workspace.classList.add('has-preview');
             savedValues.confirmation = 'No';
             help.textContent = board.help;
             document.title = 'Rippling Jira Generator — ' + board.name;
@@ -1598,14 +1670,18 @@
                 titleField.placeholder = board.titlePlaceholder;
             }
 
+            let currentSection = null;
             board.fields.forEach(function (field) {
                 if (field.section) {
+                    currentSection = document.createElement('section');
+                    currentSection.className = 'form-section';
                     const header = document.createElement('div');
                     header.className = 'section-header';
                     header.textContent = field.section;
-                    formRoot.appendChild(header);
+                    currentSection.appendChild(header);
+                    formRoot.appendChild(currentSection);
                 }
-                formRoot.appendChild(renderField(field));
+                (currentSection || formRoot).appendChild(renderField(field));
             });
 
             bindBoardEvents(board);
