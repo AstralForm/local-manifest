@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Churn email macros</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Source+Sans+3:ital,wght@0,400;0,560;0,650;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <p class="eyebrow">Customer email desk</p>
+      <h1>Churn macros</h1>
+    </div>
+    <p class="lede">Type the dates and choices. The preview writes the customer email, and you copy it when every blank is gone.</p>
+    <div class="top-actions">
+      <button type="button" id="load-example" class="btn ghost">Load example</button>
+      <button type="button" id="clear-all" class="btn ghost">Clear</button>
+    </div>
+  </header>
+
+  <main class="app">
+    <form id="macro-form" class="form-panel" autocomplete="off">
+      <section class="card">
+        <h2>Who this is for</h2>
+        <div class="grid-2">
+          <label class="field">
+            <span>Customer name</span>
+            <input id="customer-name" name="customerName" type="text" placeholder="Jordan Lee">
+          </label>
+          <label class="field">
+            <span>Requester first name</span>
+            <input id="first-name" name="firstName" type="text" placeholder="Jordan">
+            <small>Used in the account-closure email. Taken from the customer name until you edit it.</small>
+          </label>
+        </div>
+        <label class="field">
+          <span>Company DBA</span>
+          <input id="company-dba" name="companyDba" type="text" placeholder="Northwind Labs">
+        </label>
+        <div class="grid-2">
+          <label class="field">
+            <span>Your name <em>optional</em></span>
+            <input id="agent-name" name="agentName" type="text" placeholder="Alex Chen">
+          </label>
+          <label class="field">
+            <span>Sign-off</span>
+            <select id="signoff-style" name="signoffStyle">
+              <option value="none">None</option>
+              <option value="name">Name only</option>
+              <option value="regards">Best regards</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <div class="tabs" role="tablist" aria-label="Macros">
+        <button type="button" class="tab is-active" id="tab-peo" role="tab" aria-selected="true" aria-controls="panel-peo">PEO termination</button>
+        <button type="button" class="tab" id="tab-churn" role="tab" aria-selected="false" aria-controls="panel-churn">Account closure</button>
+      </div>
+
+      <section class="card" id="panel-peo" role="tabpanel" aria-labelledby="tab-peo">
+        <h2>PEO termination details</h2>
+        <div class="grid-2">
+          <label class="field">
+            <span>PEO termination date</span>
+            <input id="peo-termination" type="date">
+          </label>
+          <label class="field">
+            <span>Account closure date</span>
+            <input id="account-closure" type="date">
+          </label>
+          <label class="field">
+            <span>Final payroll with Rippling</span>
+            <input id="final-payroll" type="date">
+          </label>
+          <label class="field">
+            <span>Final pay run / offboarding email date</span>
+            <input id="final-pay-run" type="date">
+            <label class="check">
+              <input id="final-pay-run-same" type="checkbox" checked>
+              <span>Same as final payroll</span>
+            </label>
+          </label>
+          <label class="field">
+            <span>Logo churn date</span>
+            <input id="logo-churn" type="date">
+            <label class="check">
+              <input id="logo-same" type="checkbox" checked>
+              <span>Same as account closure</span>
+            </label>
+          </label>
+          <label class="field">
+            <span>Document download ends</span>
+            <input id="doc-access" type="date">
+            <label class="check">
+              <input id="doc-access-auto" type="checkbox" checked>
+              <span>Logo churn date + 30 days</span>
+            </label>
+          </label>
+        </div>
+
+        <div class="grid-2">
+          <label class="field">
+            <span>Last quarterly filing by Rippling</span>
+            <input id="peo-quarter" type="text" placeholder="Q1 2026">
+            <div class="chips" data-chips-for="peo-quarter"></div>
+          </label>
+          <label class="field">
+            <span>Last annual filing by Rippling</span>
+            <input id="peo-annual" type="text" placeholder="2025">
+            <div class="chips" data-chips-for="peo-annual"></div>
+          </label>
+        </div>
+
+        <fieldset class="choice">
+          <legend>Healthcare after PEO termination</legend>
+          <label class="option">
+            <input type="radio" name="benefits" value="offering">
+            <span>
+              <strong>Offering new healthcare benefits</strong>
+              <small>The email says Rippling will not provide PEO COBRA. The fee section stays out.</small>
+            </span>
+          </label>
+          <label class="option">
+            <input type="radio" name="benefits" value="not-offering">
+            <span>
+              <strong>Not offering new healthcare benefits</strong>
+              <small>The email says Rippling will provide PEO COBRA. The fee section is included unless you turn it off.</small>
+            </span>
+          </label>
+        </fieldset>
+
+        <label class="check block-check">
+          <input id="include-cobra" type="checkbox" disabled>
+          <span>Include the PEO COBRA orphan-access fee section ($5,000 once per company, $1,000 per participant each month).</span>
+        </label>
+
+        <label class="field">
+          <span>COBRA admin-fee article link <em>optional</em></span>
+          <input id="cobra-url" type="url" placeholder="https://help.rippling.com/…" inputmode="url">
+          <small>Appended after “COBRA administrative fees for companies that leave Rippling PEO.”</small>
+        </label>
+        <label class="field">
+          <span>Data export help article <em>optional</em></span>
+          <input id="help-url" type="url" placeholder="https://help.rippling.com/…" inputmode="url">
+          <small>How to view and export company data and documents after an account closure request.</small>
+        </label>
+      </section>
+
+      <section class="card" id="panel-churn" role="tabpanel" aria-labelledby="tab-churn" hidden>
+        <h2>Account closure details</h2>
+        <div class="grid-2">
+          <label class="field">
+            <span>Billing end date</span>
+            <input id="billing-end" type="date">
+          </label>
+          <label class="field">
+            <span>Last day to cancel the closure</span>
+            <input id="cancel-by" type="date">
+            <label class="check">
+              <input id="cancel-by-auto" type="checkbox" checked>
+              <span>Two calendar days before the billing end date</span>
+            </label>
+          </label>
+        </div>
+        <div class="grid-2">
+          <label class="field">
+            <span>Last quarterly tax filing</span>
+            <input id="churn-quarter" type="text" placeholder="Q4 2026">
+            <div class="chips" data-chips-for="churn-quarter"></div>
+          </label>
+          <label class="field">
+            <span>Last annual tax filing (inc. W-2s)</span>
+            <input id="churn-annual" type="text" placeholder="2026">
+            <div class="chips" data-chips-for="churn-annual"></div>
+          </label>
+        </div>
+
+        <fieldset class="choice">
+          <legend>Products whose data is unavailable after termination</legend>
+          <label class="check block-check">
+            <input id="include-products" type="checkbox" checked>
+            <span>Include the product download list</span>
+          </label>
+          <div id="product-tools">
+            <div class="chips" id="product-suggestions"></div>
+            <div class="product-row">
+              <input id="product-input" type="text" placeholder="Add a product, then press Enter">
+              <button type="button" id="add-product" class="btn small">Add</button>
+            </div>
+            <div id="product-list" class="product-list" aria-live="polite"></div>
+          </div>
+        </fieldset>
+
+        <fieldset class="choice">
+          <legend>Refund</legend>
+          <label class="check block-check">
+            <input id="include-refund" type="checkbox">
+            <span>A refund was approved</span>
+          </label>
+          <div class="refund-options" id="refund-options">
+            <label class="option">
+              <input type="radio" name="refund-scope" value="entire contract">
+              <span><strong>Entire contract</strong></span>
+            </label>
+            <label class="option">
+              <input type="radio" name="refund-scope" value="rest of the contract period" checked>
+              <span><strong>Rest of the contract period</strong></span>
+            </label>
+          </div>
+        </fieldset>
+      </section>
+    </form>
+
+    <aside class="preview-panel" aria-live="polite">
+      <div class="preview-head">
+        <div>
+          <p class="eyebrow" id="preview-kicker">PEO termination</p>
+          <h2 id="readiness">Fill the details</h2>
+        </div>
+        <div class="copy-actions">
+          <button type="button" id="copy-subject" class="btn ghost">Copy subject</button>
+          <button type="button" id="copy-email" class="btn primary">Copy email</button>
+          <button type="button" id="download-email" class="btn ghost">Download .txt</button>
+        </div>
+      </div>
+      <label class="field subject-field">
+        <span>Subject</span>
+        <input id="subject" type="text">
+        <button type="button" id="reset-subject" class="text-btn">Reset subject</button>
+      </label>
+      <article id="letter" class="letter" aria-label="Email preview"></article>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+  <pre id="selftest" hidden></pre>
+  <script src="app.js"></script>
+</body>
+</html>
