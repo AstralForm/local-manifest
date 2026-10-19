@@ -72,8 +72,6 @@ const els = {
   customerName: $("customer-name"),
   firstName: $("first-name"),
   companyDba: $("company-dba"),
-  agentName: $("agent-name"),
-  signoffStyle: $("signoff-style"),
   peoTermination: $("peo-termination"),
   accountClosure: $("account-closure"),
   finalPayroll: $("final-payroll"),
@@ -239,11 +237,7 @@ function syncSubject() {
 }
 
 function signoffLines() {
-  const name = els.agentName.value.trim();
-  const style = els.signoffStyle.value;
-  if (style === "none" || !name) return [];
-  if (style === "regards") return ["", "Best regards,", name];
-  return ["", name];
+  return [];
 }
 
 const LINKS = {
@@ -882,12 +876,19 @@ function render() {
   els.letter.innerHTML = email.html;
   els.previewKicker.textContent = macroLabel(state.tab);
   if (els.googleFields) els.googleFields.hidden = resellerExtra() !== "google";
-  els.readiness.textContent = blanks === 0 ? "Ready to copy" : `${blanks} blank${blanks === 1 ? "" : "s"} still in this email`;
-  els.readiness.classList.toggle("is-ready", blanks === 0);
-  els.readiness.classList.toggle("has-blanks", blanks > 0);
+  const ready = blanks === 0;
+  const wasReady = els.readiness.classList.contains("is-ready");
+  els.readiness.textContent = ready ? "Ready to copy" : `${blanks} blank${blanks === 1 ? "" : "s"} still in this email`;
+  if (wasReady !== ready) {
+    els.readiness.classList.remove("is-flipping");
+    void els.readiness.offsetWidth;
+    els.readiness.classList.add("is-flipping");
+  }
+  els.readiness.classList.toggle("is-ready", ready);
+  els.readiness.classList.toggle("has-blanks", !ready && blanks > 0);
   document.title = els.companyDba.value.trim()
-    ? `Churn macros — ${els.companyDba.value.trim()}`
-    : "Churn email macros";
+    ? `Churn Support Macros — ${els.companyDba.value.trim()}`
+    : "Churn Support Macros";
   save();
 }
 
@@ -927,6 +928,10 @@ function setTab(tab) {
     button.setAttribute("aria-selected", String(active));
   });
   state.subjectTouched[state.tab] = state.subjectTouched[state.tab] || false;
+  document.querySelector(".macro-btn.is-active")?.scrollIntoView({ block: "nearest" });
+  els.letter.classList.remove("is-in");
+  void els.letter.offsetWidth;
+  els.letter.classList.add("is-in");
   render();
 }
 
@@ -951,8 +956,6 @@ function snapshot() {
       customerName: els.customerName.value,
       firstName: els.firstName.value,
       companyDba: els.companyDba.value,
-      agentName: els.agentName.value,
-      signoffStyle: els.signoffStyle.value,
       peoTermination: els.peoTermination.value,
       accountClosure: els.accountClosure.value,
       finalPayroll: els.finalPayroll.value,
@@ -1014,8 +1017,6 @@ function applySnapshot(data) {
   els.customerName.value = fields.customerName || "";
   els.firstName.value = fields.firstName || "";
   els.companyDba.value = fields.companyDba || "";
-  els.agentName.value = fields.agentName || "";
-  els.signoffStyle.value = fields.signoffStyle || "none";
   els.peoTermination.value = fields.peoTermination || "";
   els.accountClosure.value = fields.accountClosure || "";
   els.finalPayroll.value = fields.finalPayroll || "";
@@ -1142,13 +1143,30 @@ function clearAll() {
   render();
 }
 
-function showToast(message) {
+function showToast(message, success) {
   els.toast.hidden = false;
   els.toast.textContent = message;
+  els.toast.classList.toggle("is-success", Boolean(success));
+  els.toast.classList.remove("is-on");
+  requestAnimationFrame(() => els.toast.classList.add("is-on"));
   clearTimeout(showToast.timer);
+  clearTimeout(showToast.hideTimer);
   showToast.timer = setTimeout(() => {
-    els.toast.hidden = true;
+    els.toast.classList.remove("is-on");
+    showToast.hideTimer = setTimeout(() => {
+      els.toast.hidden = true;
+    }, 280);
   }, 2200);
+}
+
+function markCopied() {
+  const button = $("copy-email");
+  if (!button) return;
+  button.classList.remove("is-copied");
+  void button.offsetWidth;
+  button.classList.add("is-copied");
+  clearTimeout(markCopied.timer);
+  markCopied.timer = setTimeout(() => button.classList.remove("is-copied"), 1600);
 }
 
 async function copyText(value, label) {
@@ -1163,7 +1181,8 @@ async function copyText(value, label) {
     area.remove();
   }
   const blanks = countBlanks(value);
-  showToast(blanks ? `${label} copied with ${blanks} blank${blanks === 1 ? "" : "s"}` : `${label} copied`);
+  showToast(blanks ? `${label} copied with ${blanks} blank${blanks === 1 ? "" : "s"}` : `${label} copied`, label === "Email");
+  if (label === "Email") markCopied();
 }
 
 async function copyEmail() {
@@ -1177,7 +1196,8 @@ async function copyEmail() {
         "text/plain": new Blob([email.text], { type: "text/plain" }),
       }),
     ]);
-    showToast(blanks ? `Email copied with ${blanks} blank${blanks === 1 ? "" : "s"}` : "Email copied");
+    showToast(blanks ? `Email copied with ${blanks} blank${blanks === 1 ? "" : "s"}` : "Email copied", true);
+    markCopied();
   } catch {
     copyText(email.text, "Email");
   }
@@ -1238,6 +1258,30 @@ function bind() {
     if (event.target.name === "benefits") state.cobraTouched = false;
     render();
   });
+  $("macro-search")?.addEventListener("input", filterMacros);
+  $("macro-search")?.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowDown") return;
+    const first = [...document.querySelectorAll(".macro-btn")].find((button) => !button.hidden);
+    if (!first) return;
+    event.preventDefault();
+    first.focus();
+  });
+  $("macro-list").addEventListener("keydown", (event) => {
+    const buttons = [...document.querySelectorAll(".macro-btn")].filter((button) => !button.hidden);
+    const index = buttons.indexOf(document.activeElement);
+    if (index < 0) return;
+    if (event.key === "ArrowDown" && buttons[index + 1]) {
+      event.preventDefault();
+      buttons[index + 1].focus();
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (index === 0) $("macro-search")?.focus();
+      else buttons[index - 1].focus();
+    }
+  });
+  $("view-edit")?.addEventListener("click", () => setView("edit"));
+  $("view-preview")?.addEventListener("click", () => setView("preview"));
   $("macro-list").addEventListener("click", (event) => {
     const button = event.target.closest("[data-macro]");
     if (!button) return;
@@ -1329,7 +1373,8 @@ function runSelfTest() {
   check(peo.includes("section 11.4 \"Replacement Coverage.\""), "terms citation");
   check(peo.includes("Data > Reports"), "reports path");
   check(peo.includes("account closure request?"), "help question");
-  check(peo.includes("Best regards,\nAlex Chen"), "sign-off");
+  check(!peo.includes("Best regards"), "no sign-off");
+  check(!document.getElementById("agent-name") && !document.getElementById("signoff-style"), "sign-off fields removed");
   check(!peo.includes("http") || peo.includes(LINKS.terms), "fixed links only");
   check(countBlanks(peo) === 0, `peo blanks: ${peo.match(/\[[^\]\n]+\]/g)}`);
 
@@ -1425,10 +1470,59 @@ function runSelfTest() {
 
   check(buildCurrencyEmail().text.includes("Your Canada payroll is now fully set up for the new funding currency"), "currency complete");
   check(buildFundingEmail().text.includes("from Wire to Direct debit"), "funding type change");
+  check(MACROS.length === 12, "twelve macros");
+  const previousTab = state.tab;
+  MACROS.forEach((macro) => {
+    state.tab = macro.id;
+    const email = currentEmail();
+    check(email.text.length > 40 && email.html.includes("<p"), `${macro.id} builds`);
+  });
+  state.tab = previousTab;
+  $("macro-search").value = "reseller";
+  filterMacros();
+  check(visibleMacros().length === 1 && visibleMacros()[0].dataset.macro === "reseller", "search finds reseller");
+  $("macro-search").value = "";
+  filterMacros();
+  check(visibleMacros().length === 12, "search cleared");
+  setView("preview");
+  check(document.body.dataset.view === "preview", "mobile preview view");
+  setView("edit");
+  check($("copy-email") && $("download-email"), "copy and download controls");
+  downloadEmail();
 
   const out = $("selftest");
   out.hidden = false;
   out.textContent = failures.length ? `FAIL\n${failures.join("\n")}` : "PASS";
+}
+
+function visibleMacros() {
+  return [...document.querySelectorAll(".macro-btn")].filter((button) => !button.hidden);
+}
+
+function filterMacros() {
+  const query = ($("macro-search")?.value || "").trim().toLowerCase();
+  document.querySelectorAll(".macro-btn").forEach((button) => {
+    button.hidden = query.length > 0 && !button.textContent.toLowerCase().includes(query);
+  });
+  document.querySelectorAll(".macro-group").forEach((group) => {
+    let sibling = group.nextElementSibling;
+    let any = false;
+    while (sibling && !sibling.classList.contains("macro-group")) {
+      if (sibling.classList.contains("macro-btn") && !sibling.hidden) any = true;
+      sibling = sibling.nextElementSibling;
+    }
+    group.hidden = !any;
+  });
+  const empty = $("macro-empty");
+  if (empty) empty.hidden = visibleMacros().length > 0;
+}
+
+function setView(view) {
+  document.body.dataset.view = view;
+  $("view-edit")?.classList.toggle("is-active", view === "edit");
+  $("view-preview")?.classList.toggle("is-active", view === "preview");
+  $("view-edit")?.setAttribute("aria-selected", String(view === "edit"));
+  $("view-preview")?.setAttribute("aria-selected", String(view === "preview"));
 }
 
 function init() {
@@ -1444,6 +1538,7 @@ function init() {
   else restore();
   if (knownMacro(params.get("tab"))) setTab(params.get("tab"));
   else setTab(state.tab || "peo");
+  if (params.get("view") === "preview" || params.get("view") === "edit") setView(params.get("view"));
 }
 
 init();

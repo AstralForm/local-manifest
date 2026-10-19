@@ -3,29 +3,58 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Churn email macros</title>
+  <title>Churn Support Macros</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Source+Sans+3:ital,wght@0,400;0,560;0,650;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@420;520;620&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body data-view="edit">
+  <div class="ambient" aria-hidden="true">
+    <span class="orb orb-a"></span>
+    <span class="orb orb-b"></span>
+    <span class="orb orb-c"></span>
+  </div>
+
   <header class="topbar">
     <div class="brand">
-      <p class="eyebrow">Customer email desk</p>
-      <h1>Churn macros</h1>
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H9l-4 3.2a.6.6 0 0 1-1-.4V6.5Z"/></svg>
+      </span>
+      <div>
+        <strong>Churn Support Macros</strong>
+        <span>Fill a macro. Copy the email.</span>
+      </div>
     </div>
-    <p class="lede">Type the dates and choices. The preview writes the customer email, and you copy it when every blank is gone.</p>
+    <div class="view-switch" role="tablist" aria-label="Workspace">
+      <button type="button" id="view-edit" class="is-active" role="tab" aria-selected="true">Edit</button>
+      <button type="button" id="view-preview" role="tab" aria-selected="false">Preview</button>
+    </div>
     <div class="top-actions">
-      <button type="button" id="load-example" class="btn ghost">Load example</button>
-      <button type="button" id="clear-all" class="btn ghost">Clear</button>
+      <button type="button" id="load-example" class="btn ghost" title="Fill the example customer">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M12 5v10M8 9l4-4 4 4M5 19h14"/></svg>
+        Example
+      </button>
+      <button type="button" id="clear-all" class="btn ghost" title="Clear every field">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M6 7h12M9 7V5h6v2m-7 0 1 12h6l1-12"/></svg>
+        Clear
+      </button>
     </div>
   </header>
 
-  <main class="app">
-    <form id="macro-form" class="form-panel" autocomplete="off">
-      <section class="card">
-        <h2>Who this is for</h2>
+  <div class="workspace">
+    <aside class="nav">
+      <label class="search">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Zm10 3-4.2-4.2"/></svg>
+        <input id="macro-search" type="search" placeholder="Search macros" aria-label="Search macros" autocomplete="off">
+      </label>
+      <div id="macro-list" class="macro-list" role="listbox" aria-label="Macros"></div>
+      <p id="macro-empty" class="macro-empty" hidden>No macros match that search.</p>
+    </aside>
+
+    <form id="macro-form" class="editor" autocomplete="off">
+      <section class="block">
+        <h2>Customer</h2>
         <div class="grid-2">
           <label class="field">
             <span>Customer name</span>
@@ -41,28 +70,9 @@
           <span>Company DBA</span>
           <input id="company-dba" name="companyDba" type="text" placeholder="Northwind Labs">
         </label>
-        <div class="grid-2">
-          <label class="field">
-            <span>Your name <em>optional</em></span>
-            <input id="agent-name" name="agentName" type="text" placeholder="Alex Chen">
-          </label>
-          <label class="field">
-            <span>Sign-off</span>
-            <select id="signoff-style" name="signoffStyle">
-              <option value="none">None</option>
-              <option value="name">Name only</option>
-              <option value="regards">Best regards</option>
-            </select>
-          </label>
-        </div>
       </section>
 
-      <section class="card">
-        <h2>Macro</h2>
-        <div id="macro-list" class="macro-list" role="listbox" aria-label="Macros"></div>
-      </section>
-
-      <section class="card" id="panel-peo" data-for="peo">
+      <section class="block" id="panel-peo" data-for="peo">
         <h2>PEO Logo Churn</h2>
         <div class="grid-2">
           <label class="field">
@@ -102,7 +112,6 @@
             </label>
           </label>
         </div>
-
         <div class="grid-2">
           <label class="field">
             <span>Last quarterly filing by Rippling</span>
@@ -115,7 +124,6 @@
             <div class="chips" data-chips-for="peo-annual"></div>
           </label>
         </div>
-
         <fieldset class="choice">
           <legend>Healthcare after PEO termination</legend>
           <label class="option">
@@ -133,14 +141,13 @@
             </span>
           </label>
         </fieldset>
-
         <label class="check block-check">
           <input id="include-cobra" type="checkbox" disabled>
           <span>Include the PEO COBRA orphan-access fee section ($5,000 once per company, $1,000 per participant each month).</span>
         </label>
       </section>
 
-      <section class="card" data-for="churn sdo im" hidden>
+      <section class="block" data-for="churn sdo im" hidden>
         <h2>Billing</h2>
         <div class="grid-2">
           <label class="field">
@@ -158,7 +165,7 @@
         </div>
       </section>
 
-      <section class="card" data-for="churn" hidden>
+      <section class="block" data-for="churn" hidden>
         <h2>Logo Churn (Non PEO)</h2>
         <div class="grid-2">
           <label class="field">
@@ -172,7 +179,6 @@
             <div class="chips" data-chips-for="churn-annual"></div>
           </label>
         </div>
-
         <fieldset class="choice">
           <legend>Products whose data is unavailable after termination</legend>
           <label class="check block-check">
@@ -188,7 +194,6 @@
             <div id="product-list" class="product-list" aria-live="polite"></div>
           </div>
         </fieldset>
-
         <fieldset class="choice">
           <legend>Refund</legend>
           <label class="check block-check">
@@ -208,7 +213,7 @@
         </fieldset>
       </section>
 
-      <section class="card" data-for="handoff-logo product-churn" hidden>
+      <section class="block" data-for="handoff-logo product-churn" hidden>
         <h2>Account manager</h2>
         <label class="field">
           <span>Account manager name</span>
@@ -226,7 +231,7 @@
         </div>
       </section>
 
-      <section class="card" data-for="im" hidden>
+      <section class="block" data-for="im" hidden>
         <h2>IM Churn</h2>
         <label class="field">
           <span>Cancellation scheduled for</span>
@@ -238,7 +243,7 @@
         </label>
       </section>
 
-      <section class="card" data-for="proactive" hidden>
+      <section class="block" data-for="proactive" hidden>
         <h2>Proactive IM Churn</h2>
         <div class="grid-2">
           <label class="field">
@@ -252,7 +257,7 @@
         </div>
       </section>
 
-      <section class="card" data-for="reseller" hidden>
+      <section class="block" data-for="reseller" hidden>
         <h2>Reseller termination</h2>
         <div class="grid-2">
           <label class="field">
@@ -297,7 +302,7 @@
         </div>
       </section>
 
-      <section class="card" data-for="pfc pfc-eor currency funding" hidden>
+      <section class="block" data-for="pfc pfc-eor currency funding" hidden>
         <h2>Payroll funding</h2>
         <div class="grid-2">
           <label class="field">
@@ -320,16 +325,26 @@
       </section>
     </form>
 
-    <aside class="preview-panel" aria-live="polite">
+    <section class="preview-panel" aria-live="polite">
       <div class="preview-head">
         <div>
-          <p class="eyebrow" id="preview-kicker">PEO termination</p>
+          <p class="eyebrow" id="preview-kicker">PEO Logo Churn</p>
           <h2 id="readiness">Fill the details</h2>
         </div>
         <div class="copy-actions">
-          <button type="button" id="copy-subject" class="btn ghost">Copy subject</button>
-          <button type="button" id="copy-email" class="btn primary">Copy email</button>
-          <button type="button" id="download-email" class="btn ghost">Download .txt</button>
+          <button type="button" id="copy-subject" class="btn ghost icon-btn" title="Copy subject">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h9A1.5 1.5 0 0 1 20 5.5v11a1.5 1.5 0 0 1-1.5 1.5H17"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4.5 8h10A1.5 1.5 0 0 1 16 9.5v9A1.5 1.5 0 0 1 14.5 20h-10A1.5 1.5 0 0 1 3 18.5v-9A1.5 1.5 0 0 1 4.5 8Z"/></svg>
+            Subject
+          </button>
+          <button type="button" id="download-email" class="btn ghost icon-btn" title="Download .txt">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
+            .txt
+          </button>
+          <button type="button" id="copy-email" class="btn primary" title="Copy email (Ctrl+Enter)">
+            <svg class="icon icon-copy" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h9A1.5 1.5 0 0 1 20 5.5v11a1.5 1.5 0 0 1-1.5 1.5H17"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4.5 8h10A1.5 1.5 0 0 1 16 9.5v9A1.5 1.5 0 0 1 14.5 20h-10A1.5 1.5 0 0 1 3 18.5v-9A1.5 1.5 0 0 1 4.5 8Z"/></svg>
+            <svg class="icon icon-check" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5 9.2 17 19 7"/></svg>
+            <span>Copy email</span>
+          </button>
         </div>
       </div>
       <label class="field subject-field">
@@ -338,8 +353,8 @@
         <button type="button" id="reset-subject" class="text-btn">Reset subject</button>
       </label>
       <article id="letter" class="letter" aria-label="Email preview"></article>
-    </aside>
-  </main>
+    </section>
+  </div>
 
   <div id="toast" class="toast" role="status" hidden></div>
   <pre id="selftest" hidden></pre>
