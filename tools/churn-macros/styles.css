@@ -289,13 +289,18 @@ input:disabled {
   border: 1px solid var(--line);
   border-radius: 18px;
   box-shadow: var(--shadow);
-  padding: 1.35rem 1.4rem 1.6rem;
-  white-space: pre-wrap;
+  padding: 1.35rem 1.5rem 1.6rem;
   font-family: var(--sans);
   font-size: 1.02rem;
-  line-height: 1.55;
+  line-height: 1.45;
   min-height: 24rem;
 }
+
+.letter p { margin: 0 0 0.85em; }
+.letter ol { margin: 0 0 0.85em; padding-left: 1.35em; }
+.letter ul { margin: 0 0 0.85em; padding-left: 1.35em; list-style-type: disc; }
+.letter li { margin: 0.15em 0; }
+.letter li > ul { margin: 0.2em 0 0.1em; list-style-type: disc; }
 
 .letter mark {
   background: var(--warn-bg);
@@ -305,7 +310,8 @@ input:disabled {
   font-weight: 650;
 }
 
-.letter a { color: var(--accent-dark); }
+.letter a { color: #1155cc; text-decoration: underline; }
+.letter strong { font-weight: 700; }
 
 .toast {
   position: fixed;

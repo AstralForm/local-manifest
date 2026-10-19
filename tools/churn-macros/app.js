@@ -54,8 +54,6 @@ const els = {
   peoQuarter: $("peo-quarter"),
   peoAnnual: $("peo-annual"),
   includeCobra: $("include-cobra"),
-  cobraUrl: $("cobra-url"),
-  helpUrl: $("help-url"),
   billingEnd: $("billing-end"),
   cancelBy: $("cancel-by"),
   cancelByAuto: $("cancel-by-auto"),
@@ -182,125 +180,259 @@ function signoffLines() {
   return ["", name];
 }
 
-function helpSentence() {
-  const url = els.helpUrl.value.trim();
-  const base = "Helpful article for your reference on how to view and export your company's data and documents stored in Rippling after an account closure request";
-  return url ? `${base}: ${url}` : `${base}?`;
+const LINKS = {
+  terms: "https://app.rippling.com/legal/peo",
+  exportTab: "https://app.rippling.com/documents/export-dashboard",
+  cobraFees: "https://help.rippling.com/article?articleId=360060242253",
+  exportHelp: "https://help.rippling.com/article?articleId=635875398636",
+};
+
+function show(value) {
+  const safe = escapeHtml(value);
+  return isBlank(value) ? `<mark>${safe}</mark>` : safe;
 }
 
-function cobraBlock() {
-  const url = els.cobraUrl.value.trim();
-  const article = `COBRA administrative fees for companies that leave Rippling PEO${url ? `: ${url}` : ""}.`;
-  return [
-    'If you are not offering healthcare benefits to your employees following termination from Rippling PEO, and COBRA participants remain on Rippling PEO-sponsored COBRA coverage after Rippling PEO contract termination, Rippling will charge you the following PEO COBRA Orphan Access fees per Rippling PEO Terms of Service, section 11.4 "Replacement Coverage":',
-    "",
-    "One-time $5,000 fee per company.",
-    "Monthly $1,000 fee per employee and/or dependent COBRA participant charged on the first day of each month, for each employee and/or dependent enrolled in Rippling PEO-sponsored COBRA coverage following the termination of your Rippling PEO contract.",
-    `COBRA administration fees will still apply in the case that you terminate your Rippling PEO contract due to business closure. Please see this Help Center article for additional details: ${article}`,
-  ].join("\n");
+function strong(html) {
+  return `<strong>${html}</strong>`;
 }
 
-function buildPeo() {
+function link(href, label, withBold) {
+  const inner = withBold ? strong(escapeHtml(label)) : escapeHtml(label);
+  return `<a href="${escapeHtml(href)}" style="color:#1155cc;text-decoration:underline">${inner}</a>`;
+}
+
+function linkedText(label, href) {
+  return `${label} (${href})`;
+}
+
+function listHtml(tag, items, nested) {
+  const margin = nested ? "4px 0 0" : "0 0 12px";
+  const marker = tag === "ul" ? ";list-style-type:disc" : "";
+  return `<${tag} style="margin:${margin};padding-left:22px${marker}">${items.map((item) => `<li style="margin:2px 0">${item.html}</li>`).join("")}</${tag}>`;
+}
+
+function listText(tag, items) {
+  return items.map((item, index) => {
+    const prefix = tag === "ol" ? `${index + 1}. ` : "- ";
+    return item.text.split("\n").map((line, lineIndex) => (lineIndex === 0 ? `${prefix}${line}` : `  ${line}`)).join("\n");
+  }).join("\n");
+}
+
+function para(html, text) {
+  return { html: `<p style="margin:0 0 12px">${html}</p>`, text };
+}
+
+function bullets(items) {
+  return { html: listHtml("ul", items, false), text: listText("ul", items) };
+}
+
+function numbers(items) {
+  return { html: listHtml("ol", items, false), text: listText("ol", items) };
+}
+
+function joinEmail(parts) {
+  const kept = parts.filter(Boolean);
+  return {
+    html: kept.map((part) => part.html).join(""),
+    text: kept.map((part) => part.text).join("\n\n"),
+  };
+}
+
+function signoffPart() {
+  const lines = signoffLines().filter((line) => line !== "");
+  if (!lines.length) return null;
+  return para(lines.map((line) => escapeHtml(line)).join("<br>"), lines.join("\n"));
+}
+
+function buildPeoEmail() {
   const benefits = selectedBenefits();
   const offeringPhrase = benefits === "offering" ? "offering" : benefits === "not-offering" ? "not offering" : `[${MISSING.benefits}]`;
   const cobraPhrase = benefits === "offering" ? "will not" : benefits === "not-offering" ? "will" : `[${MISSING.cobraVerb}]`;
   const dba = blank(els.companyDba.value, MISSING.companyDba);
-  const lines = [
-    `Hi ${blank(els.customerName.value, MISSING.customerName)},`,
-    "",
-    `I want to reach out to share that your Rippling PEO for the company ${dba} will be terminated with these details:`,
-    "",
-    `PEO termination date: ${blank(formatLong(els.peoTermination.value), MISSING.peoTermination)}`,
-    `Account closure date: ${blank(formatLong(els.accountClosure.value), MISSING.accountClosure)}`,
-    `Final payroll with Rippling: ${blank(formatLong(els.finalPayroll.value), MISSING.finalPayroll)}`,
-    `Last quarterly filing by Rippling: ${blank(els.peoQuarter.value, MISSING.lastQuarterly)}`,
-    `Last annual filing by Rippling: ${blank(els.peoAnnual.value, MISSING.lastAnnual)}`,
-    `${dba} is ${offeringPhrase} new healthcare benefits to their employees following their termination from Rippling PEO. Consequently, Rippling ${cobraPhrase} provide PEO COBRA coverage to their worksite employees – both active & terminated, as outlined in Rippling PEO Terms of Service, section 11.4 "Replacement Coverage."`,
-    "",
-    `You will receive an email from Rippling titled "[IMPORTANT] ${dba} - Information About Offboarding" with all the offboarding information on ${blank(formatLong(els.finalPayRun.value), MISSING.finalPayRun)}. An export is enabled in Rippling then, allowing you to download the documents by following these steps:`,
-    "",
-    "Login to Rippling.",
-    "Go to Tools.",
-    "Click on Documents.",
-    "Click Export on the top left.",
-    "Under the export tab, you can bulk download the following documents:",
-    "",
-    "All employee pay stubs",
-    "Most employee documents",
-    "Tax documents",
-    "ACA reports",
-    "Payroll reports",
-    "",
-    `You will have access to Rippling until the account closure date, which is ${blank(formatLong(els.logoChurn.value), MISSING.logoChurn)}. After that, your account will be closed. You can still access Rippling for 30 days after the account closure to download any documents (only), and you will have access to download documents until ${blank(formatLong(els.docAccess.value), MISSING.docAccess)}.`,
-    "",
+  const customer = blank(els.customerName.value, MISSING.customerName);
+  const termination = blank(formatLong(els.peoTermination.value), MISSING.peoTermination);
+  const closure = blank(formatLong(els.accountClosure.value), MISSING.accountClosure);
+  const payroll = blank(formatLong(els.finalPayroll.value), MISSING.finalPayroll);
+  const quarter = blank(els.peoQuarter.value, MISSING.lastQuarterly);
+  const annual = blank(els.peoAnnual.value, MISSING.lastAnnual);
+  const payRun = blank(formatLong(els.finalPayRun.value), MISSING.finalPayRun);
+  const logo = blank(formatLong(els.logoChurn.value), MISSING.logoChurn);
+  const docAccess = blank(formatLong(els.docAccess.value), MISSING.docAccess);
+  const title = `"[IMPORTANT] ${dba} - Information About Offboarding"`;
+  const helpLabel = "Helpful article for your reference on how to view and export your company's data and documents stored in Rippling after an account closure request?";
+
+  const parts = [
+    para(`Hi ${show(customer)},`, `Hi ${customer},`),
+    para(
+      `I want to reach out to share that your Rippling PEO for the company ${show(dba)} will be terminated with these details:`,
+      `I want to reach out to share that your Rippling PEO for the company ${dba} will be terminated with these details:`,
+    ),
+    numbers([
+      { html: `PEO termination date: ${show(termination)}`, text: `PEO termination date: ${termination}` },
+      { html: `Account closure date: ${show(closure)}`, text: `Account closure date: ${closure}` },
+      { html: `Final payroll with Rippling: ${show(payroll)}`, text: `Final payroll with Rippling: ${payroll}` },
+      { html: `Last quarterly filing by Rippling: ${show(quarter)}`, text: `Last quarterly filing by Rippling: ${quarter}` },
+      { html: `Last annual filing by Rippling: ${show(annual)}`, text: `Last annual filing by Rippling: ${annual}` },
+      {
+        html: `${show(dba)} is ${strong(show(offeringPhrase))} new healthcare benefits to their employees following their termination from Rippling PEO. Consequently, Rippling ${strong(show(cobraPhrase))} provide PEO COBRA coverage to their worksite employees – both active &amp; terminated, as outlined in ${link(LINKS.terms, "Rippling PEO Terms of Service", true)}, section 11.4 "Replacement Coverage."`,
+        text: `${dba} is ${offeringPhrase} new healthcare benefits to their employees following their termination from Rippling PEO. Consequently, Rippling ${cobraPhrase} provide PEO COBRA coverage to their worksite employees – both active & terminated, as outlined in ${linkedText("Rippling PEO Terms of Service", LINKS.terms)}, section 11.4 "Replacement Coverage."`,
+      },
+    ]),
+    para(
+      `You will receive an email from Rippling titled ${strong(show(title))} with all the offboarding information on ${strong(show(payRun))}. An export is enabled in Rippling then, allowing you to download the documents by following these steps:`,
+      `You will receive an email from Rippling titled ${title} with all the offboarding information on ${payRun}. An export is enabled in Rippling then, allowing you to download the documents by following these steps:`,
+    ),
+    bullets([
+      { html: "Login to Rippling.", text: "Login to Rippling." },
+      { html: "Go to Tools.", text: "Go to Tools." },
+      { html: "Click on Documents.", text: "Click on Documents." },
+      { html: `Click ${strong("Export")} on the top left.`, text: "Click Export on the top left." },
+    ]),
+    para(
+      `Under the ${link(LINKS.exportTab, "export tab", true)}, you can bulk download the following documents:`,
+      `Under the ${linkedText("export tab", LINKS.exportTab)}, you can bulk download the following documents:`,
+    ),
+    bullets([
+      "All employee pay stubs",
+      "Most employee documents",
+      "Tax documents",
+      "ACA reports",
+      "Payroll reports",
+    ].map((item) => ({ html: item, text: item }))),
+    para(
+      `You will have access to Rippling until the account closure date, which is ${strong(show(logo))}. After that, your account will be closed. You can still access Rippling for 30 days after the account closure to download any documents (only), and you will have access to download documents until ${strong(show(docAccess))}.`,
+      `You will have access to Rippling until the account closure date, which is ${logo}. After that, your account will be closed. You can still access Rippling for 30 days after the account closure to download any documents (only), and you will have access to download documents until ${docAccess}.`,
+    ),
   ];
-  if (els.includeCobra.checked) lines.push(cobraBlock(), "");
-  lines.push(
-    `Data from reports can be downloaded only until the account closure date of ${blank(formatLong(els.logoChurn.value), MISSING.logoChurn)} from the Reports tab under Data > Reports. Make sure to create and download any necessary reports before this date as Reports access will be disabled on the termination date.`,
-    "",
-    helpSentence(),
-    "",
-    "Should you have any questions or need further assistance, please don't hesitate to contact me.",
-    ...signoffLines(),
+
+  if (els.includeCobra.checked) {
+    parts.push(
+      para(
+        `If you are not offering healthcare benefits to your employees following termination from Rippling PEO, and COBRA participants remain on Rippling PEO-sponsored COBRA coverage after Rippling PEO contract termination, Rippling will charge you the following PEO COBRA Orphan Access fees per ${link(LINKS.terms, "Rippling PEO Terms of Service", true)}, section 11.4 "Replacement Coverage":`,
+        `If you are not offering healthcare benefits to your employees following termination from Rippling PEO, and COBRA participants remain on Rippling PEO-sponsored COBRA coverage after Rippling PEO contract termination, Rippling will charge you the following PEO COBRA Orphan Access fees per ${linkedText("Rippling PEO Terms of Service", LINKS.terms)}, section 11.4 "Replacement Coverage":`,
+      ),
+      bullets([
+        { html: "One-time $5,000 fee per company.", text: "One-time $5,000 fee per company." },
+        {
+          html: "Monthly $1,000 fee per employee and/or dependent COBRA participant charged on the first day of each month, for each employee and/or dependent enrolled in Rippling PEO-sponsored COBRA coverage following the termination of your Rippling PEO contract.",
+          text: "Monthly $1,000 fee per employee and/or dependent COBRA participant charged on the first day of each month, for each employee and/or dependent enrolled in Rippling PEO-sponsored COBRA coverage following the termination of your Rippling PEO contract.",
+        },
+        {
+          html: `COBRA administration fees will still apply in the case that you terminate your Rippling PEO contract due to business closure. Please see this Help Center article for additional details: ${link(LINKS.cobraFees, "COBRA administrative fees for companies that leave Rippling PEO")}.`,
+          text: `COBRA administration fees will still apply in the case that you terminate your Rippling PEO contract due to business closure. Please see this Help Center article for additional details: ${linkedText("COBRA administrative fees for companies that leave Rippling PEO", LINKS.cobraFees)}.`,
+        },
+      ]),
+    );
+  }
+
+  parts.push(
+    para(
+      `Data from reports can be downloaded only until the account closure date of ${strong(show(logo))} from the Reports tab under ${strong("Data &gt; Reports")}. Make sure to create and download any necessary reports before this date as ${strong("Reports access will be disabled")} on the termination date.`,
+      `Data from reports can be downloaded only until the account closure date of ${logo} from the Reports tab under Data > Reports. Make sure to create and download any necessary reports before this date as Reports access will be disabled on the termination date.`,
+    ),
+    para(link(LINKS.exportHelp, helpLabel), linkedText(helpLabel, LINKS.exportHelp)),
+    para(
+      "Should you have any questions or need further assistance, please don't hesitate to contact me.",
+      "Should you have any questions or need further assistance, please don't hesitate to contact me.",
+    ),
+    signoffPart(),
   );
-  return lines.join("\n");
+  return joinEmail(parts);
+}
+
+function buildChurnEmail() {
+  const dba = blank(els.companyDba.value, MISSING.companyDba);
+  const billing = blank(formatLong(els.billingEnd.value), MISSING.billingEnd);
+  const firstName = blank(els.firstName.value, MISSING.firstName);
+  const quarter = blank(els.churnQuarter.value, MISSING.churnQuarter);
+  const annual = blank(els.churnAnnual.value, MISSING.churnAnnual);
+  const cancelBy = blank(formatLong(els.cancelBy.value), MISSING.cancelBy);
+  const title = `"[IMPORTANT] ${dba} - Information About Offboarding."`;
+  const scope = refundScope();
+  const filingItems = [
+    { html: `Last quarterly tax filing: ${show(quarter)}`, text: `Last quarterly tax filing: ${quarter}` },
+    { html: `Last annual tax filing (inc. W-2s): ${show(annual)}`, text: `Last annual tax filing (inc. W-2s): ${annual}` },
+    {
+      html: "Please contact us if you want us to make any changes to these filing preferences.",
+      text: "Please contact us if you want us to make any changes to these filing preferences.",
+    },
+  ];
+  const detailItems = [
+    {
+      html: `${strong("Billing End Date:")} ${show(billing)}. You will not incur any subscription charges after this date, and access to all Rippling subscriptions will terminate on this date.`,
+      text: `Billing End Date: ${billing}. You will not incur any subscription charges after this date, and access to all Rippling subscriptions will terminate on this date.`,
+    },
+    {
+      html: `${strong("Offboarding Email:")} We have dispatched an email titled ${strong(show(title))} This email contains critical product-specific shutoff dates, data export deadlines, and other essential offboarding-related information.`,
+      text: `Offboarding Email: We have dispatched an email titled ${title} This email contains critical product-specific shutoff dates, data export deadlines, and other essential offboarding-related information.`,
+    },
+    {
+      html: `${strong("Important - US Filing Preferences:")} Your filing preferences are set to:${listHtml("ul", filingItems, true)}`,
+      text: `Important - US Filing Preferences: Your filing preferences are set to:\n${listText("ul", filingItems)}`,
+    },
+  ];
+
+  if (els.includeProducts.checked) {
+    const products = state.products.length
+      ? state.products.map((name) => ({ html: escapeHtml(name), text: name }))
+      : [{ html: show(`[${MISSING.products}]`), text: `[${MISSING.products}]` }];
+    detailItems.push({
+      html: `${strong("Important - You will need to download all critical data from these products before the account termination:")}${listHtml("ul", products, true)}`,
+      text: `Important - You will need to download all critical data from these products before the account termination:\n${listText("ul", products)}`,
+    });
+  }
+
+  if (els.includeRefund.checked) {
+    detailItems.push({
+      html: `${strong("Refund Information:")} A refund for the ${strong(escapeHtml(scope))} has been approved and will be credited to your account within 3-5 business days after your ${strong(show(billing))}.`,
+      text: `Refund Information: A refund for the ${scope} has been approved and will be credited to your account within 3-5 business days after your ${billing}.`,
+    });
+  }
+
+  return joinEmail([
+    para(`Hello ${show(firstName)},`, `Hello ${firstName},`),
+    para(
+      "I confirm that your Rippling services account closure is now finalized. No further action is required on your part.",
+      "I confirm that your Rippling services account closure is now finalized. No further action is required on your part.",
+    ),
+    para("Follow these steps to verify:", "Follow these steps to verify:"),
+    bullets([
+      {
+        html: `From the sidebar, select ${strong("Company Settings &gt; Company Settings")}.`,
+        text: "From the sidebar, select Company Settings > Company Settings.",
+      },
+      {
+        html: `Select the ${strong("Billing tab &gt; Subscriptions sub-tab")}.`,
+        text: "Select the Billing tab > Subscriptions sub-tab.",
+      },
+      {
+        html: `Select ${strong("Offboarding subscriptions from the dropdown &gt; View offboarding details")}.`,
+        text: "Select Offboarding subscriptions from the dropdown > View offboarding details.",
+      },
+    ]),
+    para(
+      "Please find the important details regarding your account closure below:",
+      "Please find the important details regarding your account closure below:",
+    ),
+    bullets(detailItems),
+    para(
+      `If you have any questions, concerns, or require assistance with cancelling this account closure, please reach out to us before ${strong(show(cancelBy))}. We cannot accept account closure cancellation requests beyond this timeframe, as the process will already be triggered in our backend systems.`,
+      `If you have any questions, concerns, or require assistance with cancelling this account closure, please reach out to us before ${cancelBy}. We cannot accept account closure cancellation requests beyond this timeframe, as the process will already be triggered in our backend systems.`,
+    ),
+    signoffPart(),
+  ]);
+}
+
+function buildPeo() {
+  return buildPeoEmail().text;
 }
 
 function buildChurn() {
-  const dba = blank(els.companyDba.value, MISSING.companyDba);
-  const billing = blank(formatLong(els.billingEnd.value), MISSING.billingEnd);
-  const lines = [
-    `Hello ${blank(els.firstName.value, MISSING.firstName)},`,
-    "",
-    "I confirm that your Rippling services account closure is now finalized. No further action is required on your part.",
-    "",
-    "Follow these steps to verify:",
-    "",
-    "From the sidebar, select Company Settings > Company Settings.",
-    "",
-    "Select the Billing tab > Subscriptions sub-tab.",
-    "",
-    "Select Offboarding subscriptions from the dropdown > View offboarding details.",
-    "",
-    "Please find the important details regarding your account closure below:",
-    "",
-    `Billing End Date: ${billing}. You will not incur any subscription charges after this date, and access to all Rippling subscriptions will terminate on this date.`,
-    "",
-    `Offboarding Email: We have dispatched an email titled "[IMPORTANT] ${dba} - Information About Offboarding." This email contains critical product-specific shutoff dates, data export deadlines, and other essential offboarding-related information.`,
-    "",
-    "Important - US Filing Preferences: Your filing preferences are set to:",
-    "",
-    `Last quarterly tax filing: ${blank(els.churnQuarter.value, MISSING.churnQuarter)}`,
-    "",
-    `Last annual tax filing (inc. W-2s): ${blank(els.churnAnnual.value, MISSING.churnAnnual)}`,
-    "",
-    "Please contact us if you want us to make any changes to these filing preferences.",
-    "",
-  ];
-  if (els.includeProducts.checked) {
-    const products = state.products.length ? state.products.join("\n") : `[${MISSING.products}]`;
-    lines.push(
-      "Important - You will need to download all critical data from these products before the account termination:",
-      "",
-      products,
-      "",
-    );
-  }
-  if (els.includeRefund.checked) {
-    lines.push(
-      `Refund Information: A refund for the ${refundScope()} has been approved and will be credited to your account within 3-5 business days after your ${billing}.`,
-      "",
-    );
-  }
-  lines.push(
-    `If you have any questions, concerns, or require assistance with cancelling this account closure, please reach out to us before ${blank(formatLong(els.cancelBy.value), MISSING.cancelBy)}. We cannot accept account closure cancellation requests beyond this timeframe, as the process will already be triggered in our backend systems.`,
-    ...signoffLines(),
-  );
-  return lines.join("\n");
+  return buildChurnEmail().text;
 }
 
 function currentEmail() {
-  return state.tab === "peo" ? buildPeo() : buildChurn();
+  return state.tab === "peo" ? buildPeoEmail() : buildChurnEmail();
 }
 
 function escapeHtml(value) {
@@ -308,19 +440,6 @@ function escapeHtml(value) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
-}
-
-function highlight(plain) {
-  let html = escapeHtml(plain);
-  MISSING_TOKENS.forEach((token) => {
-    html = html.split(escapeHtml(token)).join(`<mark>${escapeHtml(token)}</mark>`);
-  });
-  html = html.replace(/https?:\/\/[^\s<]+/g, (url) => {
-    const clean = url.replace(/[),.]+$/, "");
-    const trailing = url.slice(clean.length);
-    return `<a href="${clean}">${clean}</a>${trailing}`;
-  });
-  return html;
 }
 
 function renderProducts() {
@@ -349,8 +468,8 @@ function render() {
   renderProducts();
 
   const email = currentEmail();
-  const blanks = countBlanks(`${els.subject.value}\n${email}`);
-  els.letter.innerHTML = highlight(email);
+  const blanks = countBlanks(`${els.subject.value}\n${email.text}`);
+  els.letter.innerHTML = email.html;
   els.previewKicker.textContent = state.tab === "peo" ? "PEO termination" : "Account closure";
   els.readiness.textContent = blanks === 0 ? "Ready to copy" : `${blanks} blank${blanks === 1 ? "" : "s"} still in this email`;
   els.readiness.classList.toggle("is-ready", blanks === 0);
@@ -409,8 +528,6 @@ function snapshot() {
       peoAnnual: els.peoAnnual.value,
       benefits: selectedBenefits(),
       includeCobra: els.includeCobra.checked,
-      cobraUrl: els.cobraUrl.value,
-      helpUrl: els.helpUrl.value,
       billingEnd: els.billingEnd.value,
       cancelBy: els.cancelBy.value,
       cancelByAuto: els.cancelByAuto.checked,
@@ -455,8 +572,6 @@ function applySnapshot(data) {
   els.docAccessAuto.checked = fields.docAccessAuto !== false;
   els.peoQuarter.value = fields.peoQuarter || "";
   els.peoAnnual.value = fields.peoAnnual || "";
-  els.cobraUrl.value = fields.cobraUrl || "";
-  els.helpUrl.value = fields.helpUrl || "";
   els.billingEnd.value = fields.billingEnd || "";
   els.cancelBy.value = fields.cancelBy || "";
   els.cancelByAuto.checked = fields.cancelByAuto !== false;
@@ -560,8 +675,25 @@ async function copyText(value, label) {
   showToast(blanks ? `${label} copied with ${blanks} blank${blanks === 1 ? "" : "s"}` : `${label} copied`);
 }
 
-function downloadEmail() {
+async function copyEmail() {
   const email = currentEmail();
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.45;color:#222">${email.html}</div>`;
+  const blanks = countBlanks(email.text);
+  try {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        "text/html": new Blob([html], { type: "text/html" }),
+        "text/plain": new Blob([email.text], { type: "text/plain" }),
+      }),
+    ]);
+    showToast(blanks ? `Email copied with ${blanks} blank${blanks === 1 ? "" : "s"}` : "Email copied");
+  } catch {
+    copyText(email.text, "Email");
+  }
+}
+
+function downloadEmail() {
+  const email = currentEmail().text;
   const blob = new Blob([`Subject: ${els.subject.value}\n\n${email}\n`], { type: "text/plain" });
   const link = document.createElement("a");
   const slug = (els.companyDba.value || "customer").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -634,7 +766,7 @@ function bind() {
       addProduct(els.productInput.value);
     }
   });
-  $("copy-email").addEventListener("click", () => copyText(currentEmail(), "Email"));
+  $("copy-email").addEventListener("click", () => copyEmail());
   $("copy-subject").addEventListener("click", () => copyText(els.subject.value, "Subject"));
   $("download-email").addEventListener("click", downloadEmail);
   $("reset-subject").addEventListener("click", () => {
@@ -653,7 +785,7 @@ function bind() {
   document.addEventListener("keydown", (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
-      copyText(currentEmail(), "Email");
+      copyEmail();
     }
   });
 }
@@ -685,11 +817,19 @@ function runSelfTest() {
   loadExample();
   const peo = buildPeo();
   check(peo.includes("Hi Jordan Lee,"), "customer greeting");
-  check(peo.includes("PEO termination date: March 31, 2026"), "termination date");
-  check(peo.includes("Account closure date: April 15, 2026"), "closure date");
-  check(peo.includes("Final payroll with Rippling: March 27, 2026"), "final payroll");
-  check(peo.includes("Last quarterly filing by Rippling: Q1 2026"), "peo quarter");
-  check(peo.includes("Last annual filing by Rippling: 2025"), "peo annual");
+  check(peo.includes("1. PEO termination date: March 31, 2026"), "termination date");
+  check(peo.includes("2. Account closure date: April 15, 2026"), "closure date");
+  check(peo.includes("3. Final payroll with Rippling: March 27, 2026"), "final payroll");
+  check(peo.includes("4. Last quarterly filing by Rippling: Q1 2026"), "peo quarter");
+  check(peo.includes("5. Last annual filing by Rippling: 2025"), "peo annual");
+  check(peo.includes("6. Northwind Labs is not offering"), "numbered healthcare item");
+  check(peo.includes("- Login to Rippling.\n- Go to Tools.\n- Click on Documents.\n- Click Export on the top left."), "export steps");
+  check(peo.includes("- All employee pay stubs\n- Most employee documents\n- Tax documents\n- ACA reports\n- Payroll reports"), "document bullets");
+  check(peo.includes("- One-time $5,000 fee per company."), "cobra bullet");
+  check(peo.includes(LINKS.terms), "terms url");
+  check(peo.includes(LINKS.exportTab), "export tab url");
+  check(peo.includes(LINKS.cobraFees), "cobra article url");
+  check(peo.includes(LINKS.exportHelp), "export help url");
   check(peo.includes("Northwind Labs is not offering new healthcare benefits"), "not offering");
   check(peo.includes("Rippling will provide PEO COBRA coverage"), "will provide cobra");
   check(peo.includes('"[IMPORTANT] Northwind Labs - Information About Offboarding"'), "offboarding title");
@@ -699,29 +839,29 @@ function runSelfTest() {
   check(peo.includes("One-time $5,000 fee per company."), "cobra setup fee");
   check(peo.includes("Monthly $1,000 fee per employee"), "cobra monthly fee");
   check(peo.includes("section 11.4 \"Replacement Coverage.\""), "terms citation");
-  check(peo.includes("Login to Rippling."), "export steps");
   check(peo.includes("Data > Reports"), "reports path");
-  check(peo.includes("account closure request?"), "help question without a link");
+  check(peo.includes("account closure request?"), "help question");
   check(peo.includes("Best regards,\nAlex Chen"), "sign-off");
-  els.helpUrl.value = "https://example.com/export";
-  els.cobraUrl.value = "https://example.com/cobra";
-  const withLinks = buildPeo();
-  check(withLinks.includes("request: https://example.com/export"), "help url");
-  check(withLinks.includes("Rippling PEO: https://example.com/cobra."), "cobra url");
-  els.helpUrl.value = "";
-  els.cobraUrl.value = "";
+  check(!peo.includes("http") || peo.includes(LINKS.terms), "fixed links only");
   check(countBlanks(peo) === 0, `peo blanks: ${peo.match(/\[[^\]\n]+\]/g)}`);
 
-  const peoNode = document.createElement("div");
-  peoNode.innerHTML = highlight(peo);
-  check(peoNode.textContent === peo, "peo preview matches copy text");
+  const peoHtml = buildPeoEmail().html;
+  check(peoHtml.includes("<ol"), "numbered list");
+  check((peoHtml.match(/<li /g) || []).length >= 6, "peo list items");
+  check((peoHtml.match(/app\.rippling\.com\/legal\/peo/g) || []).length === 2, "terms linked twice");
+  check(peoHtml.includes(`href="${LINKS.exportTab}"`), "export tab linked");
+  check(peoHtml.includes(`href="${LINKS.cobraFees}"`), "cobra article linked");
+  check(peoHtml.includes(`href="${LINKS.exportHelp}"`), "help article linked");
+  check(!peoHtml.includes("cobra-url") && !peoHtml.includes("example.com"), "no custom link fields");
 
   const churn = buildChurn();
   check(churn.startsWith("Hello Jordan,"), "churn greeting");
   check(churn.includes("Billing End Date: April 15, 2026."), "billing end");
   check(churn.includes("Last quarterly tax filing: Q1 2026"), "churn quarter");
   check(churn.includes("Last annual tax filing (inc. W-2s): 2025"), "churn annual");
-  check(churn.includes("Spend\nReview Cycles"), "product list");
+  check(churn.includes("- From the sidebar, select Company Settings > Company Settings.\n- Select the Billing tab > Subscriptions sub-tab.\n- Select Offboarding subscriptions from the dropdown > View offboarding details."), "verify bullets");
+  check(churn.includes("  - Last quarterly tax filing: Q1 2026\n  - Last annual tax filing (inc. W-2s): 2025\n  - Please contact us"), "nested filing bullets");
+  check(churn.includes("  - Spend\n  - Review Cycles"), "nested product bullets");
   check(churn.includes("refund for the rest of the contract period"), "refund scope");
   check(churn.includes("before April 13, 2026."), "cancel deadline");
   check(churn.includes("Company Settings > Company Settings."), "verify steps");
@@ -730,10 +870,13 @@ function runSelfTest() {
   document.querySelector('input[name="benefits"][value="offering"]').checked = true;
   state.cobraTouched = false;
   syncBenefits();
-  const offering = buildPeo();
+  const offeringEmail = buildPeoEmail();
+  const offering = offeringEmail.text;
   check(offering.includes("Northwind Labs is offering new healthcare benefits"), "offering phrase");
   check(offering.includes("Rippling will not provide PEO COBRA coverage"), "will not provide");
   check(!offering.includes("$5,000"), "fee section omitted when offering benefits");
+  check(!offeringEmail.html.includes(LINKS.cobraFees), "cobra link omitted with the fee section");
+  check(offeringEmail.html.includes(LINKS.terms), "terms link remains");
   check(!els.includeCobra.checked && els.includeCobra.disabled, "cobra checkbox locked off");
 
   els.includeProducts.checked = false;
