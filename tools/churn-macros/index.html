@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Churn Support Macros</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@420;520;620&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-view="edit">
+  <div class="ambient" aria-hidden="true">
+    <span class="orb orb-a"></span>
+    <span class="orb orb-b"></span>
+    <span class="orb orb-c"></span>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H9l-4 3.2a.6.6 0 0 1-1-.4V6.5Z"/></svg>
+      </span>
+      <div>
+        <strong>Churn Support Macros</strong>
+        <span>Fill a macro. Copy the email.</span>
+      </div>
+    </div>
+    <div class="view-switch" role="tablist" aria-label="Workspace">
+      <button type="button" id="view-edit" class="is-active" role="tab" aria-selected="true">Edit</button>
+      <button type="button" id="view-preview" role="tab" aria-selected="false">Preview</button>
+    </div>
+    <div class="top-actions">
+      <button type="button" id="load-example" class="btn ghost" title="Fill the example customer">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M12 5v10M8 9l4-4 4 4M5 19h14"/></svg>
+        Example
+      </button>
+      <button type="button" id="clear-all" class="btn ghost" title="Clear every field">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M6 7h12M9 7V5h6v2m-7 0 1 12h6l1-12"/></svg>
+        Clear
+      </button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="nav">
+      <label class="search">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Zm10 3-4.2-4.2"/></svg>
+        <input id="macro-search" type="search" placeholder="Search macros" aria-label="Search macros" autocomplete="off">
+      </label>
+      <div id="macro-list" class="macro-list" role="listbox" aria-label="Macros"></div>
+      <p id="macro-empty" class="macro-empty" hidden>No macros match that search.</p>
+    </aside>
+
+    <form id="macro-form" class="editor" autocomplete="off">
+      <section class="block">
+        <h2>Customer</h2>
+        <div class="grid-2">
+          <label class="field">
+            <span>Customer name</span>
+            <input id="customer-name" name="customerName" type="text" placeholder="Jordan Lee">
+          </label>
+          <label class="field">
+            <span>Requester first name</span>
+            <input id="first-name" name="firstName" type="text" placeholder="Jordan">
+            <small>Used when the macro greets them by first name. Taken from the customer name until you edit it.</small>
+          </label>
+        </div>
+        <label class="field">
+          <span>Company DBA</span>
+          <input id="company-dba" name="companyDba" type="text" placeholder="Northwind Labs">
+        </label>
+      </section>
+
+      <section class="block" id="panel-peo" data-for="peo">
+        <h2>PEO Logo Churn</h2>
+        <div class="grid-2">
+          <label class="field">
+            <span>PEO termination date</span>
+            <input id="peo-termination" type="date">
+          </label>
+          <label class="field">
+            <span>Account closure date</span>
+            <input id="account-closure" type="date">
+          </label>
+          <label class="field">
+            <span>Final payroll with Rippling</span>
+            <input id="final-payroll" type="date">
+          </label>
+          <label class="field">
+            <span>Final pay run / offboarding email date</span>
+            <input id="final-pay-run" type="date">
+            <label class="check">
+              <input id="final-pay-run-same" type="checkbox" checked>
+              <span>Same as final payroll</span>
+            </label>
+          </label>
+          <label class="field">
+            <span>Logo churn date</span>
+            <input id="logo-churn" type="date">
+            <label class="check">
+              <input id="logo-same" type="checkbox" checked>
+              <span>Same as account closure</span>
+            </label>
+          </label>
+          <label class="field">
+            <span>Document download ends</span>
+            <input id="doc-access" type="date">
+            <label class="check">
+              <input id="doc-access-auto" type="checkbox" checked>
+              <span>Logo churn date + 30 days</span>
+            </label>
+          </label>
+        </div>
+        <div class="grid-2">
+          <label class="field">
+            <span>Last quarterly filing by Rippling</span>
+            <input id="peo-quarter" type="text" placeholder="Q1 2026">
+            <div class="chips" data-chips-for="peo-quarter"></div>
+          </label>
+          <label class="field">
+            <span>Last annual filing by Rippling</span>
+            <input id="peo-annual" type="text" placeholder="2025">
+            <div class="chips" data-chips-for="peo-annual"></div>
+          </label>
+        </div>
+        <fieldset class="choice">
+          <legend>Healthcare after PEO termination</legend>
+          <label class="option">
+            <input type="radio" name="benefits" value="offering">
+            <span>
+              <strong>Offering new healthcare benefits</strong>
+              <small>The email says Rippling will not provide PEO COBRA. The fee section stays out.</small>
+            </span>
+          </label>
+          <label class="option">
+            <input type="radio" name="benefits" value="not-offering">
+            <span>
+              <strong>Not offering new healthcare benefits</strong>
+              <small>The email says Rippling will provide PEO COBRA. The fee section is included unless you turn it off.</small>
+            </span>
+          </label>
+        </fieldset>
+        <label class="check block-check">
+          <input id="include-cobra" type="checkbox" disabled>
+          <span>Include the PEO COBRA orphan-access fee section ($5,000 once per company, $1,000 per participant each month).</span>
+        </label>
+      </section>
+
+      <section class="block" data-for="churn sdo im" hidden>
+        <h2>Billing</h2>
+        <div class="grid-2">
+          <label class="field">
+            <span>Billing end date</span>
+            <input id="billing-end" type="date">
+          </label>
+          <label class="field">
+            <span>Last day to cancel the closure</span>
+            <input id="cancel-by" type="date">
+            <label class="check">
+              <input id="cancel-by-auto" type="checkbox" checked>
+              <span>Two calendar days before the billing end date</span>
+            </label>
+          </label>
+        </div>
+      </section>
+
+      <section class="block" data-for="churn" hidden>
+        <h2>Logo Churn (Non PEO)</h2>
+        <div class="grid-2">
+          <label class="field">
+            <span>Last quarterly tax filing</span>
+            <input id="churn-quarter" type="text" placeholder="Q4 2026">
+            <div class="chips" data-chips-for="churn-quarter"></div>
+          </label>
+          <label class="field">
+            <span>Last annual tax filing (inc. W-2s)</span>
+            <input id="churn-annual" type="text" placeholder="2026">
+            <div class="chips" data-chips-for="churn-annual"></div>
+          </label>
+        </div>
+        <fieldset class="choice">
+          <legend>Products whose data is unavailable after termination</legend>
+          <label class="check block-check">
+            <input id="include-products" type="checkbox" checked>
+            <span>Include the product download list</span>
+          </label>
+          <div id="product-tools">
+            <div class="chips" id="product-suggestions"></div>
+            <div class="product-row">
+              <input id="product-input" type="text" placeholder="Add a product, then press Enter">
+              <button type="button" id="add-product" class="btn small">Add</button>
+            </div>
+            <div id="product-list" class="product-list" aria-live="polite"></div>
+          </div>
+        </fieldset>
+        <fieldset class="choice">
+          <legend>Refund</legend>
+          <label class="check block-check">
+            <input id="include-refund" type="checkbox">
+            <span>A refund was approved</span>
+          </label>
+          <div class="refund-options" id="refund-options">
+            <label class="option">
+              <input type="radio" name="refund-scope" value="entire contract">
+              <span><strong>Entire contract</strong></span>
+            </label>
+            <label class="option">
+              <input type="radio" name="refund-scope" value="rest of the contract period" checked>
+              <span><strong>Rest of the contract period</strong></span>
+            </label>
+          </div>
+        </fieldset>
+      </section>
+
+      <section class="block" data-for="handoff-logo product-churn" hidden>
+        <h2>Account manager</h2>
+        <label class="field">
+          <span>Account manager name</span>
+          <input id="am-name" type="text" placeholder="Priya Shah">
+        </label>
+        <div class="grid-2">
+          <label class="field">
+            <span>Account manager email</span>
+            <input id="am-email" type="email" placeholder="priya.shah@rippling.com">
+          </label>
+          <label class="field">
+            <span>Meeting link</span>
+            <input id="meeting-link" type="url" placeholder="https://">
+          </label>
+        </div>
+      </section>
+
+      <section class="block" data-for="im" hidden>
+        <h2>IM Churn</h2>
+        <label class="field">
+          <span>Cancellation scheduled for</span>
+          <input id="im-scheduled" type="date">
+        </label>
+        <label class="check block-check">
+          <input id="im-refund" type="checkbox">
+          <span>A refund was granted for the entire contract</span>
+        </label>
+      </section>
+
+      <section class="block" data-for="proactive" hidden>
+        <h2>Proactive IM Churn</h2>
+        <div class="grid-2">
+          <label class="field">
+            <span>Termination date</span>
+            <input id="proactive-end" type="date">
+          </label>
+          <label class="field">
+            <span>Reply by</span>
+            <input id="proactive-reply" type="date">
+          </label>
+        </div>
+      </section>
+
+      <section class="block" data-for="reseller" hidden>
+        <h2>Reseller termination</h2>
+        <div class="grid-2">
+          <label class="field">
+            <span>Reseller subscription</span>
+            <input id="reseller-subscription" type="text" placeholder="Dropbox">
+          </label>
+          <label class="field">
+            <span>Entity name</span>
+            <input id="entity-name" type="text" placeholder="Northwind Labs">
+          </label>
+        </div>
+        <fieldset class="choice">
+          <legend>Extra section</legend>
+          <label class="option">
+            <input type="radio" name="reseller-extra" value="none" checked>
+            <span><strong>Neither</strong></span>
+          </label>
+          <label class="option">
+            <input type="radio" name="reseller-extra" value="dropbox">
+            <span><strong>Dropbox only</strong></span>
+          </label>
+          <label class="option">
+            <input type="radio" name="reseller-extra" value="google">
+            <span><strong>Google Workspace only</strong></span>
+          </label>
+        </fieldset>
+        <div id="google-fields">
+          <label class="field">
+            <span>Domain</span>
+            <input id="google-domain" type="text" placeholder="northwindlabs.com">
+          </label>
+          <div class="grid-2">
+            <label class="field">
+              <span>Rippling account</span>
+              <input id="google-account" type="text" placeholder="Northwind Labs">
+            </label>
+            <label class="field">
+              <span>Google email</span>
+              <input id="google-email" type="email" placeholder="admin@northwindlabs.com">
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="block" data-for="pfc pfc-eor currency funding" hidden>
+        <h2>Payroll funding</h2>
+        <div class="grid-2">
+          <label class="field">
+            <span>Country</span>
+            <input id="payroll-country" type="text" placeholder="Canada">
+          </label>
+          <label class="field" data-for="pfc pfc-eor">
+            <span>New currency or country</span>
+            <input id="funding-source" type="text" placeholder="CAD">
+          </label>
+          <label class="field" data-for="funding">
+            <span>Original funding type</span>
+            <input id="original-type" type="text" placeholder="Wire">
+          </label>
+          <label class="field" data-for="funding">
+            <span>New funding type</span>
+            <input id="new-type" type="text" placeholder="Direct debit">
+          </label>
+        </div>
+      </section>
+    </form>
+
+    <section class="preview-panel" aria-live="polite">
+      <div class="preview-head">
+        <div>
+          <p class="eyebrow" id="preview-kicker">PEO Logo Churn</p>
+          <h2 id="readiness">Fill the details</h2>
+        </div>
+        <div class="copy-actions">
+          <button type="button" id="copy-subject" class="btn ghost icon-btn" title="Copy subject">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h9A1.5 1.5 0 0 1 20 5.5v11a1.5 1.5 0 0 1-1.5 1.5H17"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4.5 8h10A1.5 1.5 0 0 1 16 9.5v9A1.5 1.5 0 0 1 14.5 20h-10A1.5 1.5 0 0 1 3 18.5v-9A1.5 1.5 0 0 1 4.5 8Z"/></svg>
+            Subject
+          </button>
+          <button type="button" id="download-email" class="btn ghost icon-btn" title="Download .txt">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
+            .txt
+          </button>
+          <button type="button" id="copy-email" class="btn primary" title="Copy email (Ctrl+Enter)">
+            <svg class="icon icon-copy" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h9A1.5 1.5 0 0 1 20 5.5v11a1.5 1.5 0 0 1-1.5 1.5H17"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4.5 8h10A1.5 1.5 0 0 1 16 9.5v9A1.5 1.5 0 0 1 14.5 20h-10A1.5 1.5 0 0 1 3 18.5v-9A1.5 1.5 0 0 1 4.5 8Z"/></svg>
+            <svg class="icon icon-check" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5 9.2 17 19 7"/></svg>
+            <span>Copy email</span>
+          </button>
+        </div>
+      </div>
+      <label class="field subject-field">
+        <span>Subject</span>
+        <input id="subject" type="text">
+        <button type="button" id="reset-subject" class="text-btn">Reset subject</button>
+      </label>
+      <article id="letter" class="letter" aria-label="Email preview"></article>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+  <pre id="selftest" hidden></pre>
+  <script src="app.js"></script>
+</body>
+</html>
