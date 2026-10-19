@@ -153,6 +153,43 @@ input:disabled {
   color: var(--muted);
 }
 
+.macro-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-height: 18rem;
+  overflow: auto;
+  padding-right: 0.2rem;
+}
+
+.macro-group {
+  margin: 0.55rem 0 0.15rem;
+  color: var(--faint);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.macro-group:first-child { margin-top: 0; }
+
+.macro-btn {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  padding: 0.38rem 0.55rem;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.macro-btn.is-active {
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  font-weight: 650;
+}
+
 .tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;

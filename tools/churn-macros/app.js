@@ -32,7 +32,39 @@ const MISSING = {
   churnAnnual: "Last annual tax filing",
   cancelBy: "Cancellation deadline",
   products: "Product list",
+  amName: "AM name",
+  amEmail: "AM email",
+  meetingLink: "Meeting link",
+  resellerSubscription: "Reseller subscription",
+  entityName: "Entity name",
+  country: "Country",
+  fundingSource: "New currency or country",
+  originalType: "Original funding type",
+  newType: "New funding type",
+  domain: "Domain",
+  googleAccount: "Google account",
+  googleEmail: "Google email",
+  scheduledDate: "Scheduled cancellation date",
+  proactiveEnd: "Termination date",
+  replyBy: "Reply-by date",
 };
+
+const MACROS = [
+  { id: "peo", group: "Logo churn", label: "PEO Logo Churn" },
+  { id: "churn", group: "Logo churn", label: "Logo Churn (Non PEO)" },
+  { id: "handoff-logo", group: "AM handoff", label: "Logo Churn" },
+  { id: "product-churn", group: "AM handoff", label: "Product Churn" },
+  { id: "sdo", group: "Initiated churn", label: "SDO Initiated" },
+  { id: "im", group: "Initiated churn", label: "IM Churn" },
+  { id: "proactive", group: "Initiated churn", label: "Proactive IM Churn" },
+  { id: "reseller", group: "Reseller", label: "Reseller termination" },
+  { id: "pfc", group: "Payroll funding", label: "PFC Initial Outreach" },
+  { id: "pfc-eor", group: "Payroll funding", label: "PFC Initial Outreach (EOR)" },
+  { id: "currency", group: "Payroll funding", label: "Currency Change Complete" },
+  { id: "funding", group: "Payroll funding", label: "Funding Type Change Complete" },
+];
+
+const SDO_LINK = "https://help.rippling.com/s/article/360056303853";
 
 const $ = (id) => document.getElementById(id);
 
@@ -65,6 +97,23 @@ const els = {
   productTools: $("product-tools"),
   includeRefund: $("include-refund"),
   refundOptions: $("refund-options"),
+  amName: $("am-name"),
+  amEmail: $("am-email"),
+  meetingLink: $("meeting-link"),
+  imScheduled: $("im-scheduled"),
+  imRefund: $("im-refund"),
+  proactiveEnd: $("proactive-end"),
+  proactiveReply: $("proactive-reply"),
+  resellerSubscription: $("reseller-subscription"),
+  entityName: $("entity-name"),
+  googleDomain: $("google-domain"),
+  googleAccount: $("google-account"),
+  googleEmail: $("google-email"),
+  googleFields: $("google-fields"),
+  payrollCountry: $("payroll-country"),
+  fundingSource: $("funding-source"),
+  originalType: $("original-type"),
+  newType: $("new-type"),
   subject: $("subject"),
   letter: $("letter"),
   readiness: $("readiness"),
@@ -160,12 +209,29 @@ function syncFirstName() {
   if (!state.firstNameTouched) els.firstName.value = firstToken(els.customerName.value);
 }
 
+function macroLabel(id) {
+  const match = MACROS.find((macro) => macro.id === id);
+  return match ? match.label : "Macro";
+}
+
 function defaultSubject(tab) {
   const dba = els.companyDba.value.trim();
-  if (tab === "peo") {
-    return dba ? `Rippling PEO termination — ${dba}` : "Rippling PEO termination";
-  }
-  return dba ? `Your Rippling account closure is finalized — ${dba}` : "Your Rippling account closure is finalized";
+  const company = dba || "your company";
+  const subjects = {
+    peo: dba ? `Rippling PEO termination — ${dba}` : "Rippling PEO termination",
+    churn: dba ? `Your Rippling account closure is finalized — ${dba}` : "Your Rippling account closure is finalized",
+    "handoff-logo": `Next steps to terminate your Rippling account — ${company}`,
+    "product-churn": `Next steps to terminate your Rippling product — ${company}`,
+    sdo: `Your Rippling cancellation has been initiated — ${company}`,
+    im: `Account cancellation for ${company}`,
+    proactive: `Action needed to keep your Rippling account — ${company}`,
+    reseller: `Reseller cancellation — ${els.entityName.value.trim() || company}`,
+    pfc: "Payroll funding change request",
+    "pfc-eor": "EOR payroll funding change request",
+    currency: "Your payroll funding currency is updated",
+    funding: "Your payroll funding type is updated",
+  };
+  return subjects[tab] || "Rippling update";
 }
 
 function syncSubject() {
@@ -423,6 +489,336 @@ function buildChurnEmail() {
   ]);
 }
 
+function contactLink(value, label) {
+  if (isBlank(value)) return { html: show(value), text: value };
+  return { html: link(`mailto:${value}`, value), text: value };
+}
+
+function webLink(value) {
+  if (isBlank(value)) return { html: show(value), text: value };
+  const href = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+  return { html: link(href, value), text: value };
+}
+
+function buildHandoffEmail(kind) {
+  const name = blank(els.customerName.value, MISSING.customerName);
+  const manager = blank(els.amName.value, MISSING.amName);
+  const email = blank(els.amEmail.value, MISSING.amEmail);
+  const meeting = blank(els.meetingLink.value, MISSING.meetingLink);
+  const mail = contactLink(email);
+  const meet = webLink(meeting);
+  const opening = kind === "product"
+    ? "Thank you for confirming the reason for the request to terminate the product."
+    : "Thank you for confirming the reason for your request to terminate the account.";
+  const proceed = kind === "product"
+    ? `To proceed with the next steps, please reach out to your Account Manager, ${manager}, at ${email}. Product terminations, contract changes, refunds, and any contract additions or removals are handled by our Account Management team.`
+    : `To proceed, please contact your Account Manager, ${manager}, at ${email}. Account terminations, contract changes, refunds, and related adjustments are handled by the Account Management team to ensure everything is configured correctly.`;
+  const proceedHtml = kind === "product"
+    ? `To proceed with the next steps, please reach out to your Account Manager, ${show(manager)}, at ${mail.html}. Product terminations, contract changes, refunds, and any contract additions or removals are handled by our Account Management team.`
+    : `To proceed, please contact your Account Manager, ${show(manager)}, at ${mail.html}. Account terminations, contract changes, refunds, and related adjustments are handled by the Account Management team to ensure everything is configured correctly.`;
+  const schedule = kind === "product"
+    ? `You can also schedule a call directly with your Account Manager using this meeting link: ${meeting}. Please ensure that the call is scheduled and that you receive confirmation from your Account Manager. If the call is not scheduled or the termination is not confirmed, the product may automatically renew and billing may continue.`
+    : `You may also schedule a call directly using this link: ${meeting}. Once the call is completed and the termination details are confirmed, your Account Manager will initiate the formal termination process.`;
+  const scheduleHtml = kind === "product"
+    ? `You can also schedule a call directly with your Account Manager using this meeting link: ${meet.html}. Please ensure that the call is scheduled and that you receive confirmation from your Account Manager. If the call is not scheduled or the termination is not confirmed, the product may automatically renew and billing may continue.`
+    : `You may also schedule a call directly using this link: ${meet.html}. Once the call is completed and the termination details are confirmed, your Account Manager will initiate the formal termination process.`;
+  const closing = kind === "product"
+    ? [
+        "Scheduling this call or obtaining written confirmation from your Account Manager is important to ensure the product is terminated with the correct settings and to prevent any additional charges.",
+        "Please let me know once you've scheduled the call with your Account Manager, or if you have any follow-up questions.",
+      ]
+    : [
+        "Please note that until the termination is formally confirmed and submitted, the account will remain active and billing will continue in accordance with your contract terms.",
+        "Let me know once you have connected with your Account Manager, or if you have any questions in the meantime.",
+      ];
+  return joinEmail([
+    para(`Hi ${show(name)},`, `Hi ${name},`),
+    para(opening, opening),
+    para(proceedHtml, proceed),
+    para(scheduleHtml, schedule),
+    para(closing[0], closing[0]),
+    para(closing[1], closing[1]),
+    signoffPart(),
+  ]);
+}
+
+function buildSdoEmail() {
+  const firstName = blank(els.firstName.value, MISSING.firstName);
+  const billing = blank(formatLong(els.billingEnd.value), MISSING.billingEnd);
+  const dba = blank(els.companyDba.value, MISSING.companyDba);
+  const cancelBy = blank(formatLong(els.cancelBy.value), MISSING.cancelBy);
+  const closureTitle = `"${dba} - Complete your account closure request"`;
+  const offboardingTitle = `"[IMPORTANT] ${dba} - Information About Offboarding"`;
+  return joinEmail([
+    para(`Hi ${show(firstName)},`, `Hi ${firstName},`),
+    para(
+      "The cancellation process has been initiated and the next steps to schedule the account termination will be completed within 3 business days.",
+      "The cancellation process has been initiated and the next steps to schedule the account termination will be completed within 3 business days.",
+    ),
+    para("Here are the details:", "Here are the details:"),
+    bullets([
+      { html: `${strong("Billing End Date:")} ${show(billing)}`, text: `Billing End Date: ${billing}` },
+      {
+        html: "You'll have access to the product, including payroll, until this date.",
+        text: "You'll have access to the product, including payroll, until this date.",
+      },
+      {
+        html: `You will receive an email titled ${strong(show(closureTitle))} with instructions to complete the subscription closure within 24 hours. Please ignore this email as this step will be handled by us. ETA: 3 business days.`,
+        text: `You will receive an email titled ${closureTitle} with instructions to complete the subscription closure within 24 hours. Please ignore this email as this step will be handled by us. ETA: 3 business days.`,
+      },
+      {
+        html: `You will then receive an email titled ${strong(show(offboardingTitle))} with guidance on offboarding next steps.`,
+        text: `You will then receive an email titled ${offboardingTitle} with guidance on offboarding next steps.`,
+      },
+      {
+        html: `${strong("Important Note:")} Please review the off-boarding details to review your filing preferences and other details critical to a successful off-boarding from Rippling.`,
+        text: "Important Note: Please review the off-boarding details to review your filing preferences and other details critical to a successful off-boarding from Rippling.",
+      },
+    ]),
+    para(
+      `Here's an article for your reference: ${link(SDO_LINK, "Cancel my Rippling subscription")}. If you have any questions, concerns, or require assistance with cancelling this account closure, please reach out to us before ${strong(show(cancelBy))}. We cannot accept account closure cancellation requests beyond this timeframe, as the process will already be triggered in our backend systems.`,
+      `Here's an article for your reference: Cancel my Rippling subscription (${SDO_LINK}). If you have any questions, concerns, or require assistance with cancelling this account closure, please reach out to us before ${cancelBy}. We cannot accept account closure cancellation requests beyond this timeframe, as the process will already be triggered in our backend systems.`,
+    ),
+    signoffPart(),
+  ]);
+}
+
+function buildImEmail() {
+  const admin = blank(els.customerName.value, MISSING.customerName);
+  const company = blank(els.companyDba.value, MISSING.companyDba);
+  const scheduled = blank(formatLong(els.imScheduled.value), MISSING.scheduledDate);
+  const billing = blank(formatLong(els.billingEnd.value), MISSING.billingEnd);
+  const parts = [
+    para(`Hi ${show(admin)},`, `Hi ${admin},`),
+    para(
+      `I have received a request from your Account Manager to cancel the account for ${show(company)}. The cancellation is scheduled for ${show(scheduled)} and will be effective as of ${show(billing)}.`,
+      `I have received a request from your Account Manager to cancel the account for ${company}. The cancellation is scheduled for ${scheduled} and will be effective as of ${billing}.`,
+    ),
+  ];
+  if (els.imRefund.checked) {
+    parts.push(para(
+      `Additionally, a refund has been processed for the entire contract. This will be credited to your account within 3-5 business days after the billing end date, ${show(billing)}.`,
+      `Additionally, a refund has been processed for the entire contract. This will be credited to your account within 3-5 business days after the billing end date, ${billing}.`,
+    ));
+  }
+  parts.push(
+    para(
+      "Please let me know if you have any questions or need further assistance.",
+      "Please let me know if you have any questions or need further assistance.",
+    ),
+    signoffPart(),
+  );
+  return joinEmail(parts);
+}
+
+function buildProactiveEmail() {
+  const admin = blank(els.customerName.value, MISSING.customerName);
+  const company = blank(els.companyDba.value, MISSING.companyDba);
+  const end = blank(formatLong(els.proactiveEnd.value), MISSING.proactiveEnd);
+  const reply = blank(formatLong(els.proactiveReply.value), MISSING.replyBy);
+  const support = contactLink("support@rippling.com");
+  return joinEmail([
+    para(`Hi ${show(admin)},`, `Hi ${admin},`),
+    para(
+      `I'm reaching out to inform you that your account ${show(company)} has been inactive for over 60 days during the Implementation phase. As a result, we will proceed with terminating your account, effective ${show(end)}.`,
+      `I'm reaching out to inform you that your account ${company} has been inactive for over 60 days during the Implementation phase. As a result, we will proceed with terminating your account, effective ${end}.`,
+    ),
+    para(
+      `To avoid this termination, please respond to this email by ${show(reply)}. If we do not hear from you by then, the account will be permanently closed, and all associated services will be discontinued.`,
+      `To avoid this termination, please respond to this email by ${reply}. If we do not hear from you by then, the account will be permanently closed, and all associated services will be discontinued.`,
+    ),
+    para("Key Details:", "Key Details:"),
+    bullets([
+      { html: `${strong("Termination Date:")} ${show(end)}`, text: `Termination Date: ${end}` },
+      {
+        html: `${strong("Reason for Termination:")} No activity or response for over 60 days`,
+        text: "Reason for Termination: No activity or response for over 60 days",
+      },
+      {
+        html: `${strong("Next Steps:")} To prevent account closure, please contact us by ${show(reply)}`,
+        text: `Next Steps: To prevent account closure, please contact us by ${reply}`,
+      },
+    ]),
+    para(
+      `If you have any questions or need assistance, please reply to this email or reach out to us at ${support.html}. We're here to help and want to ensure you have all the information you need.`,
+      "If you have any questions or need assistance, please reply to this email or reach out to us at support@rippling.com. We're here to help and want to ensure you have all the information you need.",
+    ),
+    signoffPart(),
+  ]);
+}
+
+function resellerExtra() {
+  const picked = document.querySelector('input[name="reseller-extra"]:checked');
+  return picked ? picked.value : "none";
+}
+
+function buildResellerEmail() {
+  const firstName = blank(els.firstName.value, MISSING.firstName);
+  const subscription = blank(els.resellerSubscription.value, MISSING.resellerSubscription);
+  const entity = blank(els.entityName.value, MISSING.entityName);
+  const parts = [
+    para(`Hi ${show(firstName)},`, `Hi ${firstName},`),
+    para(
+      `I understand that you would like to cancel the Reseller relationship for ${show(subscription)} with Rippling, for ${show(entity)}.`,
+      `I understand that you would like to cancel the Reseller relationship for ${subscription} with Rippling, for ${entity}.`,
+    ),
+    para(
+      `Can you please confirm the Service end date to disconnect ${show(subscription)} reseller relationship with Rippling?`,
+      `Can you please confirm the Service end date to disconnect ${subscription} reseller relationship with Rippling?`,
+    ),
+    para(
+      `Rippling will terminate the billing for your ${show(subscription)} account on your desired termination date and because this billing runs on a delay, you will notice one-time charges on your account approximately 30 to 60 days after your desired termination date. You need to maintain an active payment method on file to clear existing balances and avoid future credit-collection issues.`,
+      `Rippling will terminate the billing for your ${subscription} account on your desired termination date and because this billing runs on a delay, you will notice one-time charges on your account approximately 30 to 60 days after your desired termination date. You need to maintain an active payment method on file to clear existing balances and avoid future credit-collection issues.`,
+    ),
+  ];
+  if (resellerExtra() === "dropbox") {
+    parts.push(para(
+      "Dropbox does not offer refunds beyond 14 days from the purchase date. As Rippling passes these charges directly to Dropbox, Rippling cannot accommodate these refund requests. If you terminate your reseller relationship with Rippling before your contract end date and enroll directly with Dropbox, you will incur charges under a new contract with Dropbox, as existing contract terms are not transferred or carried forward.",
+      "Dropbox does not offer refunds beyond 14 days from the purchase date. As Rippling passes these charges directly to Dropbox, Rippling cannot accommodate these refund requests. If you terminate your reseller relationship with Rippling before your contract end date and enroll directly with Dropbox, you will incur charges under a new contract with Dropbox, as existing contract terms are not transferred or carried forward.",
+    ));
+  }
+  if (resellerExtra() === "google") {
+    const domain = blank(els.googleDomain.value, MISSING.domain);
+    const account = blank(els.googleAccount.value, MISSING.googleAccount);
+    const googleEmail = blank(els.googleEmail.value, MISSING.googleEmail);
+    const mail = contactLink(googleEmail);
+    parts.push(
+      para(
+        `Here is the domain ${show(domain)} associated with your Rippling account ${show(account)}.`,
+        `Here is the domain ${domain} associated with your Rippling account ${account}.`,
+      ),
+      para(
+        `In addition, please look out for an automated email from Google at ${mail.html} outlining the next steps, including directions to transfer your billing within the next 7 business days to maintain service.`,
+        `In addition, please look out for an automated email from Google at ${googleEmail} outlining the next steps, including directions to transfer your billing within the next 7 business days to maintain service.`,
+      ),
+      para(
+        "You will receive this email from Google after the reseller termination has been processed. If you fail to transfer your billing within these seven days, you may be locked out of your email.",
+        "You will receive this email from Google after the reseller termination has been processed. If you fail to transfer your billing within these seven days, you may be locked out of your email.",
+      ),
+    );
+  }
+  parts.push(signoffPart());
+  return joinEmail(parts);
+}
+
+function buildPfcEmail(eor) {
+  const customer = blank(els.customerName.value, MISSING.customerName);
+  const country = blank(els.payrollCountry.value, MISSING.country);
+  const source = blank(els.fundingSource.value, MISSING.fundingSource);
+  const documents = bullets([
+    { html: "Most recent tax return for the entity (showing revenues)", text: "Most recent tax return for the entity (showing revenues)" },
+    {
+      html: "Audited or unaudited financial statements for the most recent reporting period (showing revenues)",
+      text: "Audited or unaudited financial statements for the most recent reporting period (showing revenues)",
+    },
+  ]);
+  const approved = eor
+    ? bullets([
+        { html: "I'll reach out with the next steps to begin the setup.", text: "I'll reach out with the next steps to begin the setup." },
+        {
+          html: "Please note: the full setup can take up to 1–2 weeks. Any payroll runs approved during this period must use your currently approved funding account. Your new account cannot be used until the process is complete.",
+          text: "Please note: the full setup can take up to 1–2 weeks. Any payroll runs approved during this period must use your currently approved funding account. Your new account cannot be used until the process is complete.",
+        },
+      ])
+    : bullets([
+        { html: "I'll reach out with the next steps to begin the setup.", text: "I'll reach out with the next steps to begin the setup." },
+        {
+          html: "Please note: setup can take up to 1-2 weeks. Any payroll runs approved during this period must use your currently approved funding account, and your new funding account cannot be used until the process is complete.",
+          text: "Please note: setup can take up to 1-2 weeks. Any payroll runs approved during this period must use your currently approved funding account, and your new funding account cannot be used until the process is complete.",
+        },
+      ]);
+  const parts = [
+    para(`Hi ${show(customer)},`, `Hi ${customer},`),
+    para(
+      eor
+        ? `I understand that you would like to fund your ${show(country)} EOR payroll from a ${show(source)} bank account. When you set up Global Payroll in the Rippling Global Payroll app, your funding currency is linked to the HQ currency by default. Rippling will debit your home currency, when payroll is approved, and automatically handle currency conversion to fund the international payroll.`
+        : `I understand that you would like to fund your ${show(country)} payroll from a ${show(source)} bank account. When you set up Global Payroll in the Rippling Global Payroll app, your funding currency is linked to the HQ currency by default. Rippling will debit your home currency, when payroll is approved, and automatically handle currency conversion to fund the international payroll.`,
+      eor
+        ? `I understand that you would like to fund your ${country} EOR payroll from a ${source} bank account. When you set up Global Payroll in the Rippling Global Payroll app, your funding currency is linked to the HQ currency by default. Rippling will debit your home currency, when payroll is approved, and automatically handle currency conversion to fund the international payroll.`
+        : `I understand that you would like to fund your ${country} payroll from a ${source} bank account. When you set up Global Payroll in the Rippling Global Payroll app, your funding currency is linked to the HQ currency by default. Rippling will debit your home currency, when payroll is approved, and automatically handle currency conversion to fund the international payroll.`,
+    ),
+  ];
+  if (!eor) {
+    parts.push(para(
+      "While this approach is our standard because most companies prefer this option to streamline operations, we do make exceptions for companies that do not have a manual money movement process because they generate significant revenue in the countries where they're paying employees.",
+      "While this approach is our standard because most companies prefer this option to streamline operations, we do make exceptions for companies that do not have a manual money movement process because they generate significant revenue in the countries where they're paying employees.",
+    ));
+    parts.push(para(
+      "Given the additional risk and cost associated with this approach, we require that our customers meet a set of eligibility standards in these cases. If qualified, you may be eligible to fund your payroll via the new funding method.",
+      "Given the additional risk and cost associated with this approach, we require that our customers meet a set of eligibility standards in these cases. If qualified, you may be eligible to fund your payroll via the new funding method.",
+    ));
+    parts.push(para(
+      "To be eligible for updating your funding method, your business must be a revenue-generating entity with revenue exceeding 10% of your payroll.",
+      "To be eligible for updating your funding method, your business must be a revenue-generating entity with revenue exceeding 10% of your payroll.",
+    ));
+  } else {
+    parts.push(para(
+      "Given the risk and cost associated with a currency or funding method change, we require that our customers meet a set of eligibility standards in these cases. If qualified, you may be eligible to fund your payroll via the new funding method.",
+      "Given the risk and cost associated with a currency or funding method change, we require that our customers meet a set of eligibility standards in these cases. If qualified, you may be eligible to fund your payroll via the new funding method.",
+    ));
+    parts.push(para(
+      "To be eligible to update your funding method, your business must be a revenue-generating entity with revenue exceeding 10% of your payroll.",
+      "To be eligible to update your funding method, your business must be a revenue-generating entity with revenue exceeding 10% of your payroll.",
+    ));
+    parts.push(para(
+      "Please note that we will only be able to move forward with your request to change your EOR payroll funding account if your business has a local entity in the country where the funding account is located. If so, please set the entity up in Rippling if you have not already. Once the entity is set up, please submit one of the following to determine your eligibility:",
+      "Please note that we will only be able to move forward with your request to change your EOR payroll funding account if your business has a local entity in the country where the funding account is located. If so, please set the entity up in Rippling if you have not already. Once the entity is set up, please submit one of the following to determine your eligibility:",
+    ));
+  }
+  if (!eor) parts.push(para("To check your eligibility, please submit one of the following:", "To check your eligibility, please submit one of the following:"));
+  parts.push(documents);
+  parts.push(para("Please note, bank statements are not acceptable proof.", "Please note, bank statements are not acceptable proof."));
+  parts.push(para(
+    eor
+      ? "Once we receive the necessary documents, our internal team will take a look to ensure you meet all the requirements. We will update you within 2 business days to inform you if your request has been approved."
+      : "Once we receive the necessary documents our internal team will take a look to ensure you meet all the requirements. We will update you within 2 business days to inform your request has been approved.",
+    eor
+      ? "Once we receive the necessary documents, our internal team will take a look to ensure you meet all the requirements. We will update you within 2 business days to inform you if your request has been approved."
+      : "Once we receive the necessary documents our internal team will take a look to ensure you meet all the requirements. We will update you within 2 business days to inform your request has been approved.",
+  ));
+  parts.push(para("If approved:", "If approved:"));
+  parts.push(approved);
+  parts.push(para("If you have any questions, please let me know.", "If you have any questions, please let me know."));
+  parts.push(signoffPart());
+  return joinEmail(parts);
+}
+
+function buildCurrencyEmail() {
+  const customer = blank(els.customerName.value, MISSING.customerName);
+  const country = blank(els.payrollCountry.value, MISSING.country);
+  return joinEmail([
+    para(`Hi ${show(customer)},`, `Hi ${customer},`),
+    para(
+      `I see that you have successfully set your new bank account as the funding method for your ${show(country)} payroll, and your next pay run is all set to be approved. Your ${show(country)} payroll is now fully set up for the new funding currency, and no further action is required.`,
+      `I see that you have successfully set your new bank account as the funding method for your ${country} payroll, and your next pay run is all set to be approved. Your ${country} payroll is now fully set up for the new funding currency, and no further action is required.`,
+    ),
+    para(
+      "Please let me know if you have any other questions, and I will be happy to assist.",
+      "Please let me know if you have any other questions, and I will be happy to assist.",
+    ),
+    signoffPart(),
+  ]);
+}
+
+function buildFundingEmail() {
+  const customer = blank(els.customerName.value, MISSING.customerName);
+  const country = blank(els.payrollCountry.value, MISSING.country);
+  const original = blank(els.originalType.value, MISSING.originalType);
+  const next = blank(els.newType.value, MISSING.newType);
+  return joinEmail([
+    para(`Hi ${show(customer)},`, `Hi ${customer},`),
+    para(
+      `I see that you have successfully updated your funding type from ${show(original)} to ${show(next)}, and your next pay run is all set to be approved. Your ${show(country)} payroll is now fully set up for the new funding type, and no further action is required.`,
+      `I see that you have successfully updated your funding type from ${original} to ${next}, and your next pay run is all set to be approved. Your ${country} payroll is now fully set up for the new funding type, and no further action is required.`,
+    ),
+    para(
+      "Please let me know if you have any other questions, and I will be happy to assist.",
+      "Please let me know if you have any other questions, and I will be happy to assist.",
+    ),
+    signoffPart(),
+  ]);
+}
+
 function buildPeo() {
   return buildPeoEmail().text;
 }
@@ -432,7 +828,21 @@ function buildChurn() {
 }
 
 function currentEmail() {
-  return state.tab === "peo" ? buildPeoEmail() : buildChurnEmail();
+  const builders = {
+    peo: buildPeoEmail,
+    churn: buildChurnEmail,
+    "handoff-logo": () => buildHandoffEmail("logo"),
+    "product-churn": () => buildHandoffEmail("product"),
+    sdo: buildSdoEmail,
+    im: buildImEmail,
+    proactive: buildProactiveEmail,
+    reseller: buildResellerEmail,
+    pfc: () => buildPfcEmail(false),
+    "pfc-eor": () => buildPfcEmail(true),
+    currency: buildCurrencyEmail,
+    funding: buildFundingEmail,
+  };
+  return (builders[state.tab] || buildPeoEmail)();
 }
 
 function escapeHtml(value) {
@@ -470,7 +880,8 @@ function render() {
   const email = currentEmail();
   const blanks = countBlanks(`${els.subject.value}\n${email.text}`);
   els.letter.innerHTML = email.html;
-  els.previewKicker.textContent = state.tab === "peo" ? "PEO termination" : "Account closure";
+  els.previewKicker.textContent = macroLabel(state.tab);
+  if (els.googleFields) els.googleFields.hidden = resellerExtra() !== "google";
   els.readiness.textContent = blanks === 0 ? "Ready to copy" : `${blanks} blank${blanks === 1 ? "" : "s"} still in this email`;
   els.readiness.classList.toggle("is-ready", blanks === 0);
   els.readiness.classList.toggle("has-blanks", blanks > 0);
@@ -480,15 +891,42 @@ function render() {
   save();
 }
 
+function knownMacro(id) {
+  return MACROS.some((macro) => macro.id === id);
+}
+
+function renderMacroList() {
+  const list = $("macro-list");
+  let group = "";
+  MACROS.forEach((macro) => {
+    if (macro.group !== group) {
+      group = macro.group;
+      const heading = document.createElement("div");
+      heading.className = "macro-group";
+      heading.textContent = group;
+      list.appendChild(heading);
+    }
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "macro-btn";
+    button.dataset.macro = macro.id;
+    button.textContent = macro.label;
+    button.setAttribute("role", "option");
+    list.appendChild(button);
+  });
+}
+
 function setTab(tab) {
-  state.tab = tab;
-  $("panel-peo").hidden = tab !== "peo";
-  $("panel-churn").hidden = tab !== "churn";
-  $("tab-peo").classList.toggle("is-active", tab === "peo");
-  $("tab-churn").classList.toggle("is-active", tab === "churn");
-  $("tab-peo").setAttribute("aria-selected", String(tab === "peo"));
-  $("tab-churn").setAttribute("aria-selected", String(tab === "churn"));
-  state.subjectTouched[tab] = state.subjectTouched[tab] || false;
+  state.tab = knownMacro(tab) ? tab : "peo";
+  document.querySelectorAll("[data-for]").forEach((panel) => {
+    panel.hidden = !panel.dataset.for.split(/\s+/).includes(state.tab);
+  });
+  document.querySelectorAll(".macro-btn").forEach((button) => {
+    const active = button.dataset.macro === state.tab;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  state.subjectTouched[state.tab] = state.subjectTouched[state.tab] || false;
   render();
 }
 
@@ -536,6 +974,23 @@ function snapshot() {
       includeProducts: els.includeProducts.checked,
       includeRefund: els.includeRefund.checked,
       refundScope: refundScope(),
+      amName: els.amName.value,
+      amEmail: els.amEmail.value,
+      meetingLink: els.meetingLink.value,
+      imScheduled: els.imScheduled.value,
+      imRefund: els.imRefund.checked,
+      proactiveEnd: els.proactiveEnd.value,
+      proactiveReply: els.proactiveReply.value,
+      resellerSubscription: els.resellerSubscription.value,
+      entityName: els.entityName.value,
+      resellerExtra: resellerExtra(),
+      googleDomain: els.googleDomain.value,
+      googleAccount: els.googleAccount.value,
+      googleEmail: els.googleEmail.value,
+      payrollCountry: els.payrollCountry.value,
+      fundingSource: els.fundingSource.value,
+      originalType: els.originalType.value,
+      newType: els.newType.value,
       subject: els.subject.value,
       subjects: state.subjects || {},
     },
@@ -579,18 +1034,37 @@ function applySnapshot(data) {
   els.churnAnnual.value = fields.churnAnnual || "";
   els.includeProducts.checked = fields.includeProducts !== false;
   els.includeRefund.checked = Boolean(fields.includeRefund);
+  els.amName.value = fields.amName || "";
+  els.amEmail.value = fields.amEmail || "";
+  els.meetingLink.value = fields.meetingLink || "";
+  els.imScheduled.value = fields.imScheduled || "";
+  els.imRefund.checked = Boolean(fields.imRefund);
+  els.proactiveEnd.value = fields.proactiveEnd || "";
+  els.proactiveReply.value = fields.proactiveReply || "";
+  els.resellerSubscription.value = fields.resellerSubscription || "";
+  els.entityName.value = fields.entityName || "";
+  els.googleDomain.value = fields.googleDomain || "";
+  els.googleAccount.value = fields.googleAccount || "";
+  els.googleEmail.value = fields.googleEmail || "";
+  els.payrollCountry.value = fields.payrollCountry || "";
+  els.fundingSource.value = fields.fundingSource || "";
+  els.originalType.value = fields.originalType || "";
+  els.newType.value = fields.newType || "";
   document.querySelectorAll('input[name="benefits"]').forEach((input) => {
     input.checked = input.value === fields.benefits;
   });
   document.querySelectorAll('input[name="refund-scope"]').forEach((input) => {
     input.checked = input.value === (fields.refundScope || "rest of the contract period");
   });
+  document.querySelectorAll('input[name="reseller-extra"]').forEach((input) => {
+    input.checked = input.value === (fields.resellerExtra || "none");
+  });
   state.products = Array.isArray(data.products) ? data.products.slice() : [];
   state.firstNameTouched = Boolean(data.firstNameTouched);
   state.subjectTouched = data.subjectTouched || { peo: false, churn: false };
   state.cobraTouched = Boolean(data.cobraTouched);
   state.subjects = fields.subjects || data.subjects || {};
-  state.tab = data.tab === "churn" ? "churn" : "peo";
+  state.tab = knownMacro(data.tab) ? data.tab : "peo";
   syncBenefits();
   if (fields.includeCobra != null && selectedBenefits() === "not-offering") {
     els.includeCobra.checked = Boolean(fields.includeCobra);
@@ -629,6 +1103,23 @@ function loadExample() {
       includeProducts: true,
       includeRefund: true,
       refundScope: "rest of the contract period",
+      amName: "Priya Shah",
+      amEmail: "priya.shah@rippling.com",
+      meetingLink: "https://rippling.example/meet/priya",
+      imScheduled: "2026-04-01",
+      imRefund: true,
+      proactiveEnd: "2026-12-31",
+      proactiveReply: "2026-12-30",
+      resellerSubscription: "Dropbox",
+      entityName: "Northwind Labs",
+      resellerExtra: "none",
+      googleDomain: "northwindlabs.com",
+      googleAccount: "Northwind Labs",
+      googleEmail: "admin@northwindlabs.com",
+      payrollCountry: "Canada",
+      fundingSource: "CAD",
+      originalType: "Wire",
+      newType: "Direct debit",
     },
   });
   render();
@@ -747,17 +1238,14 @@ function bind() {
     if (event.target.name === "benefits") state.cobraTouched = false;
     render();
   });
-  $("tab-peo").addEventListener("click", () => {
+  $("macro-list").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-macro]");
+    if (!button) return;
     state.subjects = state.subjects || {};
     state.subjects[state.tab] = els.subject.value;
-    setTab("peo");
-    if (state.subjectTouched.peo && state.subjects.peo) els.subject.value = state.subjects.peo;
-  });
-  $("tab-churn").addEventListener("click", () => {
-    state.subjects = state.subjects || {};
-    state.subjects[state.tab] = els.subject.value;
-    setTab("churn");
-    if (state.subjectTouched.churn && state.subjects.churn) els.subject.value = state.subjects.churn;
+    const next = button.dataset.macro;
+    setTab(next);
+    if (state.subjectTouched[next] && state.subjects[next]) els.subject.value = state.subjects[next];
   });
   $("add-product").addEventListener("click", () => addProduct(els.productInput.value));
   els.productInput.addEventListener("keydown", (event) => {
@@ -885,12 +1373,66 @@ function runSelfTest() {
   check(!slim.includes("Spend"), "product section omitted");
   check(!slim.includes("Refund Information"), "refund section omitted");
 
+  const handoff = buildHandoffEmail("logo").text;
+  check(handoff.includes("Hi Jordan Lee,"), "handoff greeting");
+  check(handoff.includes("Priya Shah"), "am name");
+  check(handoff.includes("priya.shah@rippling.com"), "am email");
+  check(handoff.includes("https://rippling.example/meet/priya"), "meeting link");
+  check(!handoff.includes("terminate the product"), "logo handoff is not product");
+  const product = buildHandoffEmail("product").text;
+  check(product.includes("terminate the product"), "product churn wording");
+  check(buildHandoffEmail("logo").html.includes('href="mailto:priya.shah@rippling.com"'), "am mailto");
+
+  const sdo = buildSdoEmail();
+  check(sdo.text.includes("- Billing End Date: April 15, 2026"), "sdo billing bullet");
+  check(sdo.text.includes("Northwind Labs - Complete your account closure request"), "sdo closure title");
+  check(sdo.text.includes("before April 13, 2026"), "sdo cancel deadline");
+  check(sdo.html.includes(`href="${SDO_LINK}"`), "sdo article link");
+
+  const im = buildImEmail().text;
+  check(im.includes("scheduled for April 1, 2026"), "im scheduled date");
+  check(im.includes("effective as of April 15, 2026"), "im billing date");
+  check(im.includes("refund has been processed for the entire contract"), "im refund");
+  els.imRefund.checked = false;
+  check(!buildImEmail().text.includes("refund has been processed"), "im refund omitted");
+
+  const proactive = buildProactiveEmail().text;
+  check(proactive.includes("effective December 31, 2026"), "proactive end");
+  check(proactive.includes("- Termination Date: December 31, 2026"), "proactive bullet");
+  check(proactive.includes("contact us by December 30, 2026"), "proactive reply");
+  check(buildProactiveEmail().html.includes('href="mailto:support@rippling.com"'), "support mailto");
+
+  const reseller = buildResellerEmail().text;
+  check(reseller.includes("Reseller relationship for Dropbox"), "reseller subscription");
+  check(!reseller.includes("Dropbox does not offer refunds"), "dropbox section off");
+  document.querySelector('input[name="reseller-extra"][value="dropbox"]').checked = true;
+  check(buildResellerEmail().text.includes("Dropbox does not offer refunds"), "dropbox section on");
+  document.querySelector('input[name="reseller-extra"][value="google"]').checked = true;
+  const google = buildResellerEmail().text;
+  check(google.includes("domain northwindlabs.com"), "google domain");
+  check(google.includes("admin@northwindlabs.com"), "google email");
+  check(!google.includes("Dropbox does not offer refunds"), "dropbox hidden for google");
+
+  const pfc = buildPfcEmail(false).text;
+  check(pfc.includes("fund your Canada payroll from a CAD bank account"), "pfc request");
+  check(pfc.includes("- Most recent tax return"), "pfc document bullet");
+  check(pfc.includes("inform your request has been approved"), "pfc approval wording");
+  check(!pfc.includes("EOR payroll"), "pfc is not eor");
+  const eor = buildPfcEmail(true).text;
+  check(eor.includes("fund your Canada EOR payroll"), "eor request");
+  check(eor.includes("local entity in the country"), "eor entity requirement");
+  check(eor.includes("inform you if your request has been approved"), "eor approval wording");
+
+  check(buildCurrencyEmail().text.includes("Your Canada payroll is now fully set up for the new funding currency"), "currency complete");
+  check(buildFundingEmail().text.includes("from Wire to Direct debit"), "funding type change");
+
   const out = $("selftest");
   out.hidden = false;
   out.textContent = failures.length ? `FAIL\n${failures.join("\n")}` : "PASS";
 }
 
 function init() {
+  renderMacroList();
   filingChips();
   bind();
   const params = new URLSearchParams(location.search);
@@ -900,7 +1442,7 @@ function init() {
   }
   if (params.has("sample")) loadExample();
   else restore();
-  if (params.get("tab") === "churn" || params.get("tab") === "peo") setTab(params.get("tab"));
+  if (knownMacro(params.get("tab"))) setTab(params.get("tab"));
   else setTab(state.tab || "peo");
 }
 

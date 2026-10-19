@@ -34,7 +34,7 @@
           <label class="field">
             <span>Requester first name</span>
             <input id="first-name" name="firstName" type="text" placeholder="Jordan">
-            <small>Used in the account-closure email. Taken from the customer name until you edit it.</small>
+            <small>Used when the macro greets them by first name. Taken from the customer name until you edit it.</small>
           </label>
         </div>
         <label class="field">
@@ -57,13 +57,13 @@
         </div>
       </section>
 
-      <div class="tabs" role="tablist" aria-label="Macros">
-        <button type="button" class="tab is-active" id="tab-peo" role="tab" aria-selected="true" aria-controls="panel-peo">PEO termination</button>
-        <button type="button" class="tab" id="tab-churn" role="tab" aria-selected="false" aria-controls="panel-churn">Account closure</button>
-      </div>
+      <section class="card">
+        <h2>Macro</h2>
+        <div id="macro-list" class="macro-list" role="listbox" aria-label="Macros"></div>
+      </section>
 
-      <section class="card" id="panel-peo" role="tabpanel" aria-labelledby="tab-peo">
-        <h2>PEO termination details</h2>
+      <section class="card" id="panel-peo" data-for="peo">
+        <h2>PEO Logo Churn</h2>
         <div class="grid-2">
           <label class="field">
             <span>PEO termination date</span>
@@ -140,8 +140,8 @@
         </label>
       </section>
 
-      <section class="card" id="panel-churn" role="tabpanel" aria-labelledby="tab-churn" hidden>
-        <h2>Account closure details</h2>
+      <section class="card" data-for="churn sdo im" hidden>
+        <h2>Billing</h2>
         <div class="grid-2">
           <label class="field">
             <span>Billing end date</span>
@@ -156,6 +156,10 @@
             </label>
           </label>
         </div>
+      </section>
+
+      <section class="card" data-for="churn" hidden>
+        <h2>Logo Churn (Non PEO)</h2>
         <div class="grid-2">
           <label class="field">
             <span>Last quarterly tax filing</span>
@@ -202,6 +206,117 @@
             </label>
           </div>
         </fieldset>
+      </section>
+
+      <section class="card" data-for="handoff-logo product-churn" hidden>
+        <h2>Account manager</h2>
+        <label class="field">
+          <span>Account manager name</span>
+          <input id="am-name" type="text" placeholder="Priya Shah">
+        </label>
+        <div class="grid-2">
+          <label class="field">
+            <span>Account manager email</span>
+            <input id="am-email" type="email" placeholder="priya.shah@rippling.com">
+          </label>
+          <label class="field">
+            <span>Meeting link</span>
+            <input id="meeting-link" type="url" placeholder="https://">
+          </label>
+        </div>
+      </section>
+
+      <section class="card" data-for="im" hidden>
+        <h2>IM Churn</h2>
+        <label class="field">
+          <span>Cancellation scheduled for</span>
+          <input id="im-scheduled" type="date">
+        </label>
+        <label class="check block-check">
+          <input id="im-refund" type="checkbox">
+          <span>A refund was granted for the entire contract</span>
+        </label>
+      </section>
+
+      <section class="card" data-for="proactive" hidden>
+        <h2>Proactive IM Churn</h2>
+        <div class="grid-2">
+          <label class="field">
+            <span>Termination date</span>
+            <input id="proactive-end" type="date">
+          </label>
+          <label class="field">
+            <span>Reply by</span>
+            <input id="proactive-reply" type="date">
+          </label>
+        </div>
+      </section>
+
+      <section class="card" data-for="reseller" hidden>
+        <h2>Reseller termination</h2>
+        <div class="grid-2">
+          <label class="field">
+            <span>Reseller subscription</span>
+            <input id="reseller-subscription" type="text" placeholder="Dropbox">
+          </label>
+          <label class="field">
+            <span>Entity name</span>
+            <input id="entity-name" type="text" placeholder="Northwind Labs">
+          </label>
+        </div>
+        <fieldset class="choice">
+          <legend>Extra section</legend>
+          <label class="option">
+            <input type="radio" name="reseller-extra" value="none" checked>
+            <span><strong>Neither</strong></span>
+          </label>
+          <label class="option">
+            <input type="radio" name="reseller-extra" value="dropbox">
+            <span><strong>Dropbox only</strong></span>
+          </label>
+          <label class="option">
+            <input type="radio" name="reseller-extra" value="google">
+            <span><strong>Google Workspace only</strong></span>
+          </label>
+        </fieldset>
+        <div id="google-fields">
+          <label class="field">
+            <span>Domain</span>
+            <input id="google-domain" type="text" placeholder="northwindlabs.com">
+          </label>
+          <div class="grid-2">
+            <label class="field">
+              <span>Rippling account</span>
+              <input id="google-account" type="text" placeholder="Northwind Labs">
+            </label>
+            <label class="field">
+              <span>Google email</span>
+              <input id="google-email" type="email" placeholder="admin@northwindlabs.com">
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" data-for="pfc pfc-eor currency funding" hidden>
+        <h2>Payroll funding</h2>
+        <div class="grid-2">
+          <label class="field">
+            <span>Country</span>
+            <input id="payroll-country" type="text" placeholder="Canada">
+          </label>
+          <label class="field" data-for="pfc pfc-eor">
+            <span>New currency or country</span>
+            <input id="funding-source" type="text" placeholder="CAD">
+          </label>
+          <label class="field" data-for="funding">
+            <span>Original funding type</span>
+            <input id="original-type" type="text" placeholder="Wire">
+          </label>
+          <label class="field" data-for="funding">
+            <span>New funding type</span>
+            <input id="new-type" type="text" placeholder="Direct debit">
+          </label>
+        </div>
       </section>
     </form>
 
