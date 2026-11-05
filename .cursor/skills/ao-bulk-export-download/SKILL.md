@@ -154,8 +154,7 @@ JIRA_ISSUE_TYPE="${JIRA_ISSUE_TYPE:-Task}"
 
 | Field | Default |
 |---|---|
-| `JIRA_EMAIL` | `adharewa@rippling.com` (**auth only** — never use as Reporter) |
-| `JIRA_Reporter` | `User_mail` from the runtime prompt (lookup Atlassian `accountId`, set issue Reporter) |
+| `JIRA_EMAIL` | `adharewa@rippling.com` (auth only) |
 | `JIRA_CLOUD_ID` | `969226a5-2105-49eb-a9f7-e3852660973e` |
 | `JIRA_API_BASE` | `https://api.atlassian.com/ex/jira/${JIRA_CLOUD_ID}` |
 | `JIRA_SITE_URL` | `https://rippling.atlassian.net` (browse links only) |
@@ -167,11 +166,7 @@ Token resolution: `$JIRA_API_TOKEN` → Keychain `ao-bulk-export-jira-api-token`
 
 Create issues via **gateway** `${JIRA_API_BASE}/rest/api/2/issue` (scoped tokens fail on site URL `/rest/...`).
 
-**Reporter rule:** authenticate as `JIRA_EMAIL`, but set issue **Reporter** to `User_mail` (resolved to accountId). Creator may still show the auth account; Reporter must be the operator who entered `User_mail`.
-
 Set `Jira_link="${JIRA_SITE_URL}/browse/${key}"` on success.
-
-**Jira admin prerequisite (one-time):** AOPS Create/Edit screens must include the **Reporter** field, and the auth account needs **Modify Reporter**. Without that, Jira returns `Field 'reporter' cannot be set` and the script retries create without Reporter (falls back to auth user) while printing a warning.
 
 ### Slack configuration (embed exactly)
 
@@ -244,39 +239,23 @@ Create Jira issue? (yes/no):
 
 The Jira issue must be created by the generated script, not by a Slack workflow button. Create at most one issue per script run, and only when the operator answered yes.
 
-Auth vs Reporter:
-
-- HTTP Basic auth: `JIRA_EMAIL` (`adharewa@rippling.com`) + token
-- Issue Reporter: `User_mail` (variable name in docs/scripts: `JIRA_Reporter="$User_mail"`)
-
-Reporter resolution algorithm (mandatory in generated scripts):
-
-1. Set `JIRA_Reporter="$User_mail"`.
-2. Look up Atlassian accountId:
-   `GET ${JIRA_API_BASE}/rest/api/3/user/search?query=<url-encoded User_mail>`
-3. From the JSON array, pick the first object whose `emailAddress` equals `User_mail` case-insensitively (fallback: first result with an `accountId`).
-4. Build create payload with `"reporter":{"id":"<accountId>"}` when accountId is found.
-5. POST create. If HTTP fails because reporter cannot be set (body contains `Field 'reporter' cannot be set`), **retry once without** the reporter field, set `Jira_link` from the retry if successful, and print a yellow warning that AOPS screens need Reporter + Modify Reporter permission.
-6. If accountId lookup fails, create without reporter and warn that Reporter fell back to auth user.
-
 The issue payload must include:
 
 - project key `AOPS` unless overridden;
 - issue type `Task` unless overridden;
 - summary containing company, entity, and case;
-- description containing requester email (`User_mail`), Slack user ID, senior reviewer, case, CID, company, entity, download counts, and download folder;
-- labels `ao-bulk-export` and `review-request`;
-- `reporter` set from `User_mail` accountId when available.
+- description containing requester email, Slack user ID, senior reviewer, case, CID, company, entity, download counts, and download folder;
+- labels `ao-bulk-export` and `review-request`.
 
 Validate the HTTP response:
 
 - On HTTP `200` or `201`, extract the issue key and set `Jira_link="${JIRA_SITE_URL}/browse/${key}"`.
 - If the response is malformed or no key can be extracted, set `Jira_link='n/a'`, print the response body, and continue.
-- On authentication failure, rate limit, validation error, or any non-success HTTP status: if the error is reporter-screen related, retry without reporter as above; otherwise set `Jira_link='n/a'`, print a concise diagnostic, and continue.
+- On authentication failure, rate limit, validation error, or any non-success HTTP status, set `Jira_link='n/a'`, print a concise diagnostic, and continue.
 
-Do not create duplicate Jira issues. Create at most one successful issue per script run (zero if the operator said no). The reporter retry-without-field counts as the same create attempt, not a second issue after success.
+Do not create duplicate Jira issues. Create at most one issue per script run (zero if the operator said no).
 
-Do not use `sed` for JSON escaping. For response parsing, prefer `jq` if it is installed; otherwise use a conservative macOS-available fallback such as `perl` only to extract the issue key / accountId.
+Do not use `sed` for JSON escaping. For response parsing, prefer `jq` if it is installed; otherwise use a conservative macOS-available fallback such as `perl` only to extract the issue key.
 
 ## Slack workflow notification
 
@@ -417,7 +396,6 @@ Generate the Bash script with utmost precision. Do not improvise formatting or p
 - Do not post Slack updates before downloads.
 - Do not post per-file Slack updates.
 - Ask Create Jira issue? (yes/no) after downloads; create only on yes.
-- Authenticate Jira as `JIRA_EMAIL` (`adharewa@rippling.com`); set issue Reporter from `User_mail` (`JIRA_Reporter`) via accountId lookup.
 - Ask Send Slack notification? (yes/no) after Jira; POST only on yes.
 - Create at most one Jira issue per script run.
 - Send at most one Slack webhook request per script run.

@@ -118,12 +118,11 @@ while true; do
     case "$(printf '%s' "$CREATE_JIRA" | tr '[:upper:]' '[:lower:]')" in
         yes|y)
             if [ -n "$JIRA_API_TOKEN" ]; then
-                JIRA_Reporter="$User_mail"
                 summary="AO Bulk Export Review — ${CompanyName} / ${EntityName} (${Case})"
                 description=$(cat <<EOF
 Smoke test issue from AO Bulk Export script.
 
-Requester / Reporter (User_mail): ${User_mail}
+Requester (Slack User_mail): ${User_mail}
 Requester (Slack UserID): ${UserID}
 Senior Lead Reviewer: ${Senior_Lead_Reviewer}
 Case: ${Case}
@@ -132,55 +131,15 @@ Company: ${CompanyName}
 Entity: ${EntityName}
 EOF
 )
-                # Resolve reporter accountId from User_mail (auth stays JIRA_EMAIL)
-                REPORTER_ACCOUNT_ID=''
-                # Bash-only URL encode (avoid python3 / Xcode stub on macOS)
-                encoded_mail="$(jq -nr --arg v "$JIRA_Reporter" '$v|@uri' 2>/dev/null || true)"
-                if [ -z "$encoded_mail" ]; then
-                    encoded_mail="$(printf '%s' "$JIRA_Reporter" | sed -e 's/ /%20/g' -e 's/@/%40/g' -e 's/+/%2B/g')"
-                fi
-                user_search="$(curl -sS -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" -H 'Accept: application/json' \
-                    "${JIRA_API_BASE}/rest/api/3/user/search?query=${encoded_mail}" 2>/dev/null || true)"
-                if [ -n "$user_search" ]; then
-                    if command -v jq >/dev/null 2>&1; then
-                        REPORTER_ACCOUNT_ID="$(printf '%s' "$user_search" | jq -r --arg email "$JIRA_Reporter" '
-                            (map(select((.emailAddress // "" | ascii_downcase) == ($email | ascii_downcase))) | .[0].accountId)
-                            // .[0].accountId // empty
-                        ' 2>/dev/null || true)"
-                    else
-                        REPORTER_ACCOUNT_ID="$(printf '%s' "$user_search" | perl -ne 'if (/\"accountId\"\s*:\s*\"([^\"]+)\"/) { print $1; exit }' 2>/dev/null || true)"
-                    fi
-                fi
-
-                fields_core=$(printf '"project":{"key":"AOPS"},"summary":"%s","issuetype":{"name":"Task"},"labels":["ao-bulk-export","review-request"],"description":"%s"' \
+                payload=$(printf '{"fields":{"project":{"key":"AOPS"},"summary":"%s","issuetype":{"name":"Task"},"labels":["ao-bulk-export","review-request"],"description":"%s"}}' \
                     "$(json_escape "$summary")" "$(json_escape "$description")")
-                if [ -n "$REPORTER_ACCOUNT_ID" ]; then
-                    payload=$(printf '{"fields":{%s,"reporter":{"id":"%s"}}}' "$fields_core" "$(json_escape "$REPORTER_ACCOUNT_ID")")
-                    echo -e "${BLUE}Creating Jira issue in AOPS (Reporter=${JIRA_Reporter})...${NC}"
-                else
-                    payload=$(printf '{"fields":{%s}}' "$fields_core")
-                    echo -e "${YELLOW}Could not resolve accountId for ${JIRA_Reporter}; creating without Reporter override.${NC}"
-                fi
-
+                echo -e "${BLUE}Creating Jira issue in AOPS...${NC}"
                 response="$(curl -sS -w $'\n%{http_code}' -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
                     -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' \
                     --data-binary "$payload" "${JIRA_API_BASE}/rest/api/2/issue" 2>&1)" || true
                 http_code="$(printf '%s\n' "$response" | tail -n 1)"
                 body="$(printf '%s\n' "$response" | sed '$d')"
                 echo -e "${BLUE}Jira HTTP ${http_code}${NC}"
-
-                if { [ "$http_code" != "201" ] && [ "$http_code" != "200" ]; } && printf '%s' "$body" | grep -q "Field 'reporter' cannot be set"; then
-                    echo -e "${YELLOW}Reporter field blocked by AOPS screen config; retrying without Reporter override.${NC}"
-                    echo -e "${YELLOW}Ask Jira admin: add Reporter to AOPS Create/Edit screens + Modify Reporter permission.${NC}"
-                    payload=$(printf '{"fields":{%s}}' "$fields_core")
-                    response="$(curl -sS -w $'\n%{http_code}' -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
-                        -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' \
-                        --data-binary "$payload" "${JIRA_API_BASE}/rest/api/2/issue" 2>&1)" || true
-                    http_code="$(printf '%s\n' "$response" | tail -n 1)"
-                    body="$(printf '%s\n' "$response" | sed '$d')"
-                    echo -e "${BLUE}Jira HTTP ${http_code}${NC}"
-                fi
-
                 if [ "$http_code" = "201" ] || [ "$http_code" = "200" ]; then
                     key="$(printf '%s' "$body" | sed -n 's/.*"key"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
                     Jira_link="${JIRA_SITE_URL}/browse/${key}"
