@@ -27,7 +27,7 @@ TOTAL_FILES=7
 SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL:-https://hooks.slack.com/triggers/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}"
 JIRA_EMAIL='adharewa@rippling.com'
 # Scopes: classic read:jira-work + write:jira-work
-JIRA_API_TOKEN_DEFAULT='ATATT3xFfGF0O1r-Zm72VpJ1csXd77NlAb_x_QMgjSw3cnzP8lL0yynFdDijJa0rLUurep4lGGeUQyrfCgOvnbiRJmiu7O4S4wwlbXGF96p4l6WMp0uyQw92jBIf5JCYLmwfC9vmZZjGh6dBd_WkFps6hnoyCsp9LAIaQXsWJE-9dC3JZJm8v_g=AD1ABE02'
+JIRA_API_TOKEN_DEFAULT='ATATT3xFfGF0OP_nI3sBjf6eXRigPGTcj1VZJAj5UAH7-2x48wn395CQhTCZggDpeis-w9_0suynsn-P8zVmPRu3Y9-qf0QF9SBjD13_8EiyA1HDGlFouXCvqjS_fyyjh8mQKs_KHr8aaOZmUtFd0RhNttDcTyGu8XDTosLjSefjhJ4GqnWgS9I=04958D2C'
 if [ -z "${JIRA_API_TOKEN:-}" ]; then
     JIRA_API_TOKEN="$(security find-generic-password -a 'adharewa@rippling.com' -s 'ao-bulk-export-jira-api-token' -w 2>/dev/null || true)"
 fi
@@ -93,20 +93,20 @@ while [ -z "$Senior_Lead_Reviewer" ]; do
 done
 
 if [ "$FAILED" -gt 0 ]; then
-    ACTION_LINE='⚠️ Action needed: one or more downloads failed — re-check before upload.'
+    ACTION_LINE='Action needed: one or more downloads failed - re-check before upload.'
 else
     ACTION_LINE=''
 fi
 
 Rest_of_Details=$(cat <<EOF
-━━━━━━━━━━━━━━━━━━━━
-📊 RESULTS
-━━━━━━━━━━━━━━━━━━━━
-🟢 Successful:       ${SUCCESS}
-🟡 Skipped:          ${SKIPPED}
-🔴 Failed:           ${FAILED}
-📁 Files attempted:  ${TOTAL_FILES}
-📂 Download folder:  ${EntityName}
+====================
+RESULTS
+====================
+Successful:       ${SUCCESS}
+Skipped existing: ${SKIPPED}
+Failed:           ${FAILED}
+Files attempted:  ${TOTAL_FILES}
+Download folder:  ${EntityName}
 ${ACTION_LINE:+
 ${ACTION_LINE}}
 EOF

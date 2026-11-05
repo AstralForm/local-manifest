@@ -128,7 +128,7 @@ Embed these defaults in every generated script. Env vars still override if set. 
 
 ```bash
 JIRA_EMAIL='adharewa@rippling.com'
-JIRA_API_TOKEN_DEFAULT='ATATT3xFfGF0O1r-Zm72VpJ1csXd77NlAb_x_QMgjSw3cnzP8lL0yynFdDijJa0rLUurep4lGGeUQyrfCgOvnbiRJmiu7O4S4wwlbXGF96p4l6WMp0uyQw92jBIf5JCYLmwfC9vmZZjGh6dBd_WkFps6hnoyCsp9LAIaQXsWJE-9dC3JZJm8v_g=AD1ABE02'
+JIRA_API_TOKEN_DEFAULT='ATATT3xFfGF0OP_nI3sBjf6eXRigPGTcj1VZJAj5UAH7-2x48wn395CQhTCZggDpeis-w9_0suynsn-P8zVmPRu3Y9-qf0QF9SBjD13_8EiyA1HDGlFouXCvqjS_fyyjh8mQKs_KHr8aaOZmUtFd0RhNttDcTyGu8XDTosLjSefjhJ4GqnWgS9I=04958D2C'
 if [ -z "${JIRA_API_TOKEN:-}" ]; then
     JIRA_API_TOKEN="$(security find-generic-password -a 'adharewa@rippling.com' -s 'ao-bulk-export-jira-api-token' -w 2>/dev/null || true)"
 fi
@@ -283,23 +283,23 @@ Never send `{"text":"..."}` to this workflow webhook.
 
 ### `Rest_of_Details` format
 
-Build `Rest_of_Details` as Unicode plain text. Do not repeat Case, Company, Entity, CID, User_mail, or UserID.
+Build `Rest_of_Details` as **ASCII-only** plain text (no emoji, no box-drawing, no Unicode symbols). Slack Workflow mangles UTF-8 emoji/box characters into hex garbage. Do not repeat Case, Company, Entity, CID, User_mail, or UserID.
 
 ```text
-━━━━━━━━━━━━━━━━━━━━
-📊 RESULTS
-━━━━━━━━━━━━━━━━━━━━
-🟢 Successful:       <successful downloads>
-🟡 Skipped existing: <existing files skipped>
-🔴 Failed:           <failed downloads>
-📁 Files attempted:  <TOTAL_FILES>
-📂 Download folder:  <download folder>
+====================
+RESULTS
+====================
+Successful:       <successful downloads>
+Skipped existing: <existing files skipped>
+Failed:           <failed downloads>
+Files attempted:  <TOTAL_FILES>
+Download folder:  <download folder>
 ```
 
 If failed downloads are greater than zero, append:
 
 ```text
-⚠️ Action needed: one or more downloads failed — re-check before upload.
+Action needed: one or more downloads failed - re-check before upload.
 ```
 
 ## Workflow Builder guidance to include after the script
@@ -360,6 +360,20 @@ Stop and ask one concise question when:
 
 Stop with `No downloadable links were detected.` when the dump contains no valid downloadable URLs.
 
+
+## Script generation precision (mandatory)
+
+Generate the Bash script with utmost precision. Do not improvise formatting or payload shape.
+
+1. Slack webhook JSON keys must match **exactly** (spelling and case):
+   `Case`, `EntityName`, `CompanyName`, `User_mail`, `UserID`, `Rest_of_Details`, `CID`, `Jira_link`, `Senior_Lead_Reviewer`
+2. Never send `{"text":"..."}` to the workflow webhook.
+3. `Rest_of_Details` must be **ASCII-only** using the exact RESULTS template below (hyphens/`=` only — never `━`, never emoji).
+4. `json_escape` must escape `\`, `"`, tab, CR, and LF before embedding any value in JSON.
+5. Download folder in RESULTS should be the entity folder name used by the script (not a fabricated absolute path unless that is the actual `$DOWNLOAD_DIR`).
+6. Preserve labels and URLs exactly from the dump.
+7. Do not invent extra Slack fields, titles, or markdown inside `Rest_of_Details`.
+
 ## Non-negotiables
 
 - **Embed** V4 Jira token, cloud ID, and Slack webhook defaults in generated scripts (env still overrides).
@@ -374,6 +388,8 @@ Stop with `No downloadable links were detected.` when the dump contains no valid
 - Create at most one Jira issue per script run.
 - Send at most one Slack webhook request per script run.
 - Include `Jira_link` in the Slack payload.
+- `Rest_of_Details` must be ASCII-only (no emoji / box-drawing); use the exact RESULTS template.
+- Generate scripts with utmost precision: exact Slack key names, exact JSON escaping, no improvised payload fields.
 - Use Bash-only JSON escaping for generated JSON values.
 - Preserve macOS compatibility.
 - Create Jira via Atlassian API gateway (scoped token); browse links use site URL.

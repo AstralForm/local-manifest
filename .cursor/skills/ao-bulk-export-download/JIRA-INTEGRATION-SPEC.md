@@ -31,6 +31,8 @@ Send Slack notification? (yes/no):
 
 Both are independent. Skipping Jira sets `Jira_link=n/a` and still allows Slack.
 
+`Rest_of_Details` must be **ASCII-only** (no emoji / box-drawing). Unicode in that field shows as hex garbage in Slack Workflow messages.
+
 ## Slack webhook schema (exact)
 
 ```json
